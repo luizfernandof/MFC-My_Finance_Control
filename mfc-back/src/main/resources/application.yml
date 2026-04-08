@@ -1,0 +1,36 @@
+jwt:
+  secret: ${JWT_SECRET:qR2Vv9M+u0Hn4nXjEJpZq1KXyFJ2kHq9bZrYc8uPpM0=}
+  expiration: ${JWT_EXPIRATION:600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+spring:
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/mfc_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:54168275}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: "${DB_DDL:update}"
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  security:
+    user:
+      name: disabled
+      password: disable
+
+server:
+  port: "${SERVER_PORT:8081}"
+
+cors:
+  allowed-origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:5173"
