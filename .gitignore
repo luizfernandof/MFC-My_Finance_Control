@@ -1,0 +1,46 @@
+# --- IDEs e Editores ---
+.vscode/
+.idea/
+*.swp
+*.bak
+.DS_Store
+Thumbs.db
+
+# --- Configurações Locais e Segredos (CRÍTICO) ---
+.env
+.env.local
+.env.*.local
+src/main/resources/application.yml
+docker-compose.override.yml
+
+# --- Backend (Spring Boot / Maven) ---
+mfc-back/target/
+mfc-back/pom.xml.tag
+mfc-back/pom.xml.releaseBackup
+mfc-back/pom.xml.versionsBackup
+mfc-back/pom.xml.next
+mfc-back/release.properties
+mfc-back/dependency-reduced-pom.xml
+mfc-back/build/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# --- Frontend (Node / React / Vite) ---
+mfc-front/node_modules/
+mfc-front/dist/
+mfc-front/build/
+mfc-front/.cache/
+mfc-front/.eslintcache
+mfc-front/npm-debug.log*
+mfc-front/yarn-debug.log*
+mfc-front/yarn-error.log*
+mfc-front/.pnp/
+mfc-front/.pnp.js
+
+# --- Docker ---
+.docker/
+*/data/
+mfc_db_data/

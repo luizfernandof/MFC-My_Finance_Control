@@ -1,0 +1,36 @@
+services:
+  mfc-db:
+    image: postgres:15
+    container_name: mfc-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mfc_db_data:/var/lib/postgresql/data
+
+  mfc-back:
+    build: ./mfc-back 
+    container_name: mfc-back
+    restart: unless-stopped
+    ports:
+      - "${SPRING_PORT}:${SPRING_PORT}"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://mfc-db:5432/${DB_NAME}
+      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    depends_on:
+      - mfc-db
+
+  mfc-front:
+    build: ./mfc-front
+    container_name: mfc-front
+    restart: unless-stopped
+    ports:
+      - "3001:80"
+    depends_on:
+      - mfc-back
+
+volumes:
+  mfc_db_data:
