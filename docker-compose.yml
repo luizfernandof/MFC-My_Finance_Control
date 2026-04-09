@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mfc_db_data:/var/lib/postgresql/data
@@ -15,11 +15,14 @@ services:
     container_name: mfc-back
     restart: unless-stopped
     ports:
-      - "${SPRING_PORT}:${SPRING_PORT}"
+      - "${SERVER_PORT}:${SERVER_PORT}"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://mfc-db:5432/${DB_NAME}
-      - SPRING_DATASOURCE_USERNAME=${DB_USER}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
     depends_on:
       - mfc-db
 
