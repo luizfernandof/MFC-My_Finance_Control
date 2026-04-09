@@ -2,7 +2,7 @@ import axios from 'axios';
 import router from '../router';
 
 const api = axios.create({
-  baseURL: 'https://api.mfc.devl.com.br',
+  baseURL: 'http://localhost:8081',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -62,7 +62,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
 
         // Usamos o axios puro (sem interceptors) para buscar o novo token
-        axios.post('https://api.mfc.devl.com.br/auth/refresh', { refreshToken })
+        axios.post('http://localhost:8081/auth/refresh', { refreshToken })
           .then(({ data }) => {
             // 1. Salva os novos dados
             localStorage.setItem('accessToken', data.accessToken);
