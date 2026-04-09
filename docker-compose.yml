@@ -11,7 +11,7 @@ services:
       - mfc_db_data:/var/lib/postgresql/data
 
   mfc-back:
-    build: ./mfc-back 
+    build: ./mfc-back
     container_name: mfc-back
     restart: unless-stopped
     ports:
@@ -34,3 +34,5 @@ services:
 
 volumes:
   mfc_db_data:
+    external: true
+    name: mfc_mfc_db_data
