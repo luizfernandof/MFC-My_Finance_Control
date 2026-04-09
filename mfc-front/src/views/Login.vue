@@ -80,7 +80,7 @@ function toggleMode() {
 
       <div class="text-center mb-6">
         <h2 class="text-2xl font-bold text-blue-600 italic uppercase">
-          {{ isLogin ? 'Login' : 'Criar Conta' }}
+          {{ isLogin ? 'Entrar' : 'Criar Conta' }}
         </h2>
         <p class="text-slate-400 text-xs mt-1 font-medium italic">
           My Finance Control
