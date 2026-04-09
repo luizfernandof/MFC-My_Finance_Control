@@ -1,5 +1,5 @@
 jwt:
-  secret: ${JWT_SECRET:qR2Vv9M+u0Hn4nXjEJpZq1KXyFJ2kHq9bZrYc8uPpM0=}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:600000}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
 
@@ -10,8 +10,8 @@ spring:
         max-page-size: 100
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/mfc_db}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:54168275}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
