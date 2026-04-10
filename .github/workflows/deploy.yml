@@ -12,5 +12,5 @@ jobs:
 
       - name: Build e Deploy (mfc-front, mfc-back)
         run: |
-          docker compose --env-file /root/MFC-My_Finance_Control/.env up -d --build
+          docker compose --env-file /home/actions/.env up -d --build
           docker image prune -f
