@@ -1,7 +1,11 @@
 name: Deploy Monorepo MFC
+
 on:
   push:
     branches: [ main ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
@@ -12,6 +16,6 @@ jobs:
 
       - name: Build e Deploy (mfc-front, mfc-back)
         run: |
-          docker compose down --env-file /home/actions/.env
+          docker compose --env-file /home/actions/.env down
           docker compose --env-file /home/actions/.env up -d --build
           docker image prune -f
