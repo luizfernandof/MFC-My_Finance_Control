@@ -40,7 +40,9 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // Verifica se o erro é 401 (Não autorizado) e se não é uma repetição
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Não tenta refresh para requisições de autenticação (login/refresh)
+    const isAuthRequest = originalRequest.url?.includes('/auth/');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
 
       // Se já estivermos renovando o token, colocamos esta requisição na fila
       if (isRefreshing) {

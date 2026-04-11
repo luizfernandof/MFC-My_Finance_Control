@@ -24,7 +24,14 @@ import {
   faArrowRight,
   faChevronLeft,
   faChevronRight,
-  faFilePdf
+  faFilePdf,
+  faChartLine,
+  faExchangeAlt,
+  faTags,
+  faFileAlt,
+  faUser,
+  faSignOutAlt,
+  faCalendarAlt
 } from '@fortawesome/free-solid-svg-icons'
 
 // 3. Adicionando à biblioteca global
@@ -44,7 +51,14 @@ library.add(
   faArrowRight,
   faChevronLeft,
   faChevronRight,
-  faFilePdf
+  faFilePdf,
+  faChartLine,
+  faExchangeAlt,
+  faTags,
+  faFileAlt,
+  faUser,
+  faSignOutAlt,
+  faCalendarAlt
 )
 
 const app = createApp(App)

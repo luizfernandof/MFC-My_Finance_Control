@@ -85,7 +85,7 @@ public class AuthController {
 		String requestRefreshToken = refreshTokenRequest.getRefreshToken();
 		RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken)
 				.map(refreshTokenService::verifyExpiration)
-				.orElseThrow(() -> new BusinessException("RefreshToken inválido!"));
+				.orElseThrow(() -> new BusinessException("Sessão expirada. Faça login novamente!"));
 		User user = refreshToken.getUser();
 		String newAccessToken = jwtService.generateToken(user);
 		return ResponseEntity.ok(new RefreshTokenResponse(newAccessToken));
