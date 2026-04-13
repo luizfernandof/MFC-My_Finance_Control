@@ -2,7 +2,7 @@ import axios from 'axios';
 import router from '../router';
 
 const api = axios.create({
-  baseURL: 'https://api.mfc.devl.com.br',
+  baseURL: 'http://localhost:8081',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -40,7 +40,9 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // Verifica se o erro é 401 (Não autorizado) e se não é uma repetição
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Não tenta refresh para requisições de autenticação (login/refresh)
+    const isAuthRequest = originalRequest.url?.includes('/auth/');
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
 
       // Se já estivermos renovando o token, colocamos esta requisição na fila
       if (isRefreshing) {
@@ -62,7 +64,7 @@ api.interceptors.response.use(
         const refreshToken = localStorage.getItem('refreshToken');
 
         // Usamos o axios puro (sem interceptors) para buscar o novo token
-        axios.post('https://api.mfc.devl.com.br/auth/refresh', { refreshToken })
+        axios.post('http://localhost:8081/auth/refresh', { refreshToken })
           .then(({ data }) => {
             // 1. Salva os novos dados
             localStorage.setItem('accessToken', data.accessToken);

@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(BadCredentialsException.class)
 	public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
 		ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), "Credenciais inválidas",
-				"Email ou senha incorretos");
+				"E-mail ou senha incorretos!");
 
 		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
 	}
