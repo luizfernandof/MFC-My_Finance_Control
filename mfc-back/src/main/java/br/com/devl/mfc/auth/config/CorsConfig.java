@@ -17,6 +17,8 @@ public class CorsConfig {
 		configuration.setAllowedOrigins(List.of(
 			"http://localhost:5173",
 			"http://127.0.0.1:5173",
+			"http://localhost",
+			"http://127.0.0.1",
 			"http://mfc.devl.com.br",
 			"https://mfc.devl.com.br"
 		));
