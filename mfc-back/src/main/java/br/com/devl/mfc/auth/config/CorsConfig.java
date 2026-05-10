@@ -19,7 +19,8 @@ public class CorsConfig {
 			"http://localhost:80",
 			"http://localhost:5173",
 			"http://127.0.0.1",
-			"http://127.0.0.1:5173"
+			"http://127.0.0.1:5173",
+			"https://mfc.devl.com.br"
 		));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
