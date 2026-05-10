@@ -21,7 +21,7 @@ public class SecurityConfig {
 
 	private final JwtFilter jwtFilter;
     private final SecurityExceptionHandler securityExceptionHandler;
-	
+
 	public SecurityConfig(JwtFilter jwtFilter, SecurityExceptionHandler securityExceptionHandler) {
 		this.jwtFilter = jwtFilter;
 		this.securityExceptionHandler = securityExceptionHandler;
@@ -29,7 +29,7 @@ public class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-	    
+
 	    http
 	        .cors(Customizer.withDefaults())
 	        .csrf(csrf -> csrf.disable())
@@ -42,7 +42,7 @@ public class SecurityConfig {
 	        .authorizeHttpRequests(auth -> auth
 	                // Liberando as rotas de autenticação e H2
 	                .requestMatchers("/auth/**", "/h2-console/**").permitAll()
-	                
+
 	                // LIBERAÇÃO COMPLETA DO SWAGGER (Caminhos Críticos)
 	                .requestMatchers(
 	                    "/v3/api-docs/**",          // JSON de definição
@@ -52,26 +52,26 @@ public class SecurityConfig {
 	                    "/swagger-resources/**",    // Recursos extras
 	                    "/webjars/**"               // Bibliotecas web
 	                ).permitAll()
-	                
+
 	                .anyRequest().authenticated()
 	        )
-	        .headers(headers -> 
+	        .headers(headers ->
 	            headers.frameOptions(frame -> frame.disable())
 	        )
 	        .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-	    
+
 	    return http.build();
 	}
-    
+
     @Bean
     PasswordEncoder passwordEncoder() {
     	return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
     AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
     throws Exception {
     	return authenticationConfiguration.getAuthenticationManager();
     }
-	
+
 }

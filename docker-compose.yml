@@ -9,13 +9,16 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - mfc_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   mfc-back:
     build: ./mfc-back
     container_name: mfc-back
     restart: unless-stopped
-    ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://mfc-db:5432/${DB_NAME}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
@@ -24,14 +27,15 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION}
       - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION}
     depends_on:
-      - mfc-db
+      mfc-db:
+        condition: service_healthy
 
   mfc-front:
     build: ./mfc-front
     container_name: mfc-front
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "80:80"
     depends_on:
       - mfc-back
 

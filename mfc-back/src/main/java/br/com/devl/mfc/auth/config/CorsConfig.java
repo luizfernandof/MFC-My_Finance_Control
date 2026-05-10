@@ -15,15 +15,14 @@ public class CorsConfig {
 	CorsConfigurationSource corsConfigurationSource() {
 		CorsConfiguration configuration = new CorsConfiguration();
 		configuration.setAllowedOrigins(List.of(
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
 			"http://localhost",
+			"http://localhost:80",
+			"http://localhost:5173",
 			"http://127.0.0.1",
-			"http://mfc.devl.com.br",
-			"https://mfc.devl.com.br"
+			"http://127.0.0.1:5173"
 		));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("*"));
+		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
 		configuration.setAllowCredentials(true);
 		configuration.setMaxAge(3600L);
 
