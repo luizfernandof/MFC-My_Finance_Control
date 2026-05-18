@@ -3,7 +3,6 @@ import { ref, onMounted, watch } from 'vue';
 import api from '../services/api';
 import { useBreakpoint } from '../composables/useBreakpoint';
 
-// Componentes
 import TransactionTableDesktop from '../components/TransactionTableDesktop.vue';
 import TransactionCardsMobile from '../components/TransactionCardsMobile.vue';
 import TransactionModal from '../components/TransactionModal.vue';
@@ -11,13 +10,11 @@ import ConfirmModal from '../components/ConfirmModal.vue';
 
 const { isMobile } = useBreakpoint();
 
-// --- ESTADOS ---
 const transactions = ref([]);
 const categories = ref([]);
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
-// ORDENAÇÃO
 const selectedSort = ref('date,desc');
 const sortOptions = [
   { value: 'date,desc', label: 'Data (recente)' },
@@ -26,7 +23,6 @@ const sortOptions = [
   { value: 'amount,desc', label: 'Valor (maior)' }
 ];
 
-// PAGINAÇÃO
 const currentPage = ref(0);
 const pageSize = ref(10);
 const totalElements = ref(0);
@@ -45,7 +41,6 @@ const initialForm = {
 };
 const transactionForm = ref({ ...initialForm });
 
-// --- LÓGICA DE DADOS ---
 async function fetchCategories() {
   try {
     const responseCategories = await api.get('/categories');
@@ -68,11 +63,9 @@ async function fetchTransactions() {
 
     const responseTransactions = await api.get('/transactions', { params });
 
-    // TRANSACTIONS
     const data = responseTransactions.data || {};
     transactions.value = data.content || [];
 
-    // PAGINATION
     const page = data.page || {};
     totalElements.value = Number(page.totalElements) || 0;
     totalPages.value = Number(page.totalPages) || 0;
@@ -83,7 +76,6 @@ async function fetchTransactions() {
   }
 }
 
-// WATCHERS
 watch([selectedMonth, selectedYear, pageSize, currentPage, selectedSort], () => {
   fetchTransactions();
 });
@@ -96,7 +88,6 @@ watch(isMobile, (newVal) => {
   pageSize.value = newVal ? 1000 : 10;
 }, { immediate: true });
 
-// ACTION(EDIT, DELETE, SAVE)
 function openCreate() {
   isEditing.value = false;
   transactionForm.value = { ...initialForm };
@@ -133,7 +124,6 @@ function openDeleteConfirm(t) {
 async function confirmDelete() {
   if (!transactionToDelete.value) return;
   try {
-    // Se for transação recorrente (tem groupId), deleta apenas a partir dela
     const endpoint = transactionToDelete.value.groupId
       ? `/transactions/${transactionToDelete.value.id}/recurrent-forward`
       : `/transactions/${transactionToDelete.value.id}`;
@@ -165,38 +155,36 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-10">
       <div class="w-full md:w-auto text-left">
-        <h2 class="text-2xl md:text-3xl font-black text-slate-800 italic uppercase tracking-tighter leading-tight">
+        <h2 class="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 italic uppercase tracking-tighter leading-tight">
           Transações
         </h2>
-        <p class="text-slate-400 text-[9px] font-black uppercase tracking-[0.2em]">
+        <p class="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-[0.2em]">
           {{ months[selectedMonth - 1].label }} {{ selectedYear }}
         </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
 
-        <!-- PAGINAÇÃO (setas) -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
+          class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
           <button @click="currentPage--" :disabled="currentPage === 0 || totalPages === 0"
-            class="px-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+            class="px-2 text-blue-600 dark:text-blue-400 disabled:text-slate-200 dark:disabled:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
             <font-awesome-icon icon="arrow-left" class="text-sm" />
           </button>
-          <span class="text-xs font-medium text-slate-500 mx-2 whitespace-nowrap">
+          <span class="text-xs font-medium text-slate-500 dark:text-slate-400 mx-2 whitespace-nowrap">
             {{ totalPages ? (currentPage + 1) : 0 }}/{{ totalPages || 0 }}
           </span>
           <button @click="currentPage++" :disabled="currentPage >= totalPages - 1 || totalPages === 0"
-            class="px-2 text-blue-600 disabled:text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
+            class="px-2 text-blue-600 dark:text-blue-400 disabled:text-slate-200 dark:disabled:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
             <font-awesome-icon icon="arrow-right" class="text-sm" />
           </button>
         </div>
 
-        <!-- EXIBIR -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
-          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-2">Exibir</span>
+          class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
+          <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mr-2">Exibir</span>
           <select v-model="pageSize"
-            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 appearance-none w-10 text-center">
+            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 dark:text-blue-400 appearance-none w-10 text-center">
             <option :value="5">05</option>
             <option :value="10">10</option>
             <option :value="15">15</option>
@@ -205,38 +193,34 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
           </select>
         </div>
 
-        <!-- ORDENAR -->
         <div v-if="!isMobile"
-          class="flex items-center bg-white px-3 py-1 rounded-lg border border-slate-100 shadow-sm h-9">
-          <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-2">Ordenar</span>
+          class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
+          <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mr-2">Ordenar</span>
           <select v-model="selectedSort"
-            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 appearance-none w-28">
+            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 dark:text-blue-400 appearance-none w-28">
             <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
           </select>
         </div>
 
-        <!-- MÊS/ANO -->
-        <div class="flex items-center gap-1 bg-white px-3 py-1 rounded-lg shadow-sm border border-slate-100 h-9">
+        <div class="flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 h-9">
           <select v-model="selectedMonth"
-            class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer">
+            class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer dark:text-slate-300">
             <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
           </select>
-          <div class="w-px h-4 bg-slate-200"></div>
+          <div class="w-px h-4 bg-slate-200 dark:bg-slate-600"></div>
           <select v-model="selectedYear"
-            class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer">
+            class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer dark:text-slate-300">
             <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
           </select>
         </div>
 
-        <!-- NOVO -->
         <button @click="openCreate"
-          class="bg-blue-600 text-white px-4 py-1 rounded-lg font-semibold shadow-sm active:scale-95 transition-all text-xs uppercase flex items-center gap-1.5 h-9">
+          class="bg-blue-600 dark:bg-blue-500 text-white px-4 py-1 rounded-lg font-semibold shadow-sm active:scale-95 transition-all text-xs uppercase flex items-center gap-1.5 h-9">
           <font-awesome-icon icon="plus" class="text-sm" />
           <span>Novo</span>
         </button>
 
-        <!-- Total registros (mobile) -->
-        <span v-if="isMobile" class="text-xs font-medium text-slate-400 self-center ml-2">
+        <span v-if="isMobile" class="text-xs font-medium text-slate-400 dark:text-slate-500 self-center ml-2">
           {{ totalElements }} registros
         </span>
       </div>

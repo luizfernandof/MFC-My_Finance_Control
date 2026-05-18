@@ -5,7 +5,7 @@ defineProps({
   message: String,
   confirmText: { type: String, default: 'Confirmar' },
   cancelText: { type: String, default: 'Cancelar' },
-  variant: { type: String, default: 'danger' } // 'danger' ou 'primary'
+  variant: { type: String, default: 'danger' }
 });
 
 defineEmits(['close', 'confirm']);
@@ -14,9 +14,9 @@ defineEmits(['close', 'confirm']);
 <template>
   <Transition name="fade">
     <div v-if="show" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 border border-white text-center">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-sm p-6 border border-white dark:border-slate-700 text-center">
         <div
-          :class="variant === 'danger' ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'"
+          :class="variant === 'danger' ? 'bg-rose-50 text-rose-500 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-blue-50 text-blue-500 dark:bg-blue-900/30 dark:text-blue-400'"
           class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5"
         >
           <svg v-if="variant === 'danger'" class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,19 +27,19 @@ defineEmits(['close', 'confirm']);
           </svg>
         </div>
 
-        <h3 class="text-lg font-bold text-slate-800 mb-2">{{ title }}</h3>
-        <p class="text-slate-400 text-sm mb-6">{{ message }}</p>
+        <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-2">{{ title }}</h3>
+        <p class="text-slate-400 dark:text-slate-400 text-sm mb-6">{{ message }}</p>
 
         <div class="flex gap-3">
           <button
             @click="$emit('close')"
-            class="flex-1 py-3 text-slate-400 font-medium text-sm rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors"
+            class="flex-1 py-3 text-slate-400 dark:text-slate-500 font-medium text-sm rounded-xl border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             {{ cancelText }}
           </button>
           <button
             @click="$emit('confirm')"
-            :class="variant === 'danger' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-blue-600 hover:bg-blue-700'"
+            :class="variant === 'danger' ? 'bg-rose-500 hover:bg-rose-600' : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600'"
             class="flex-1 py-3 text-white rounded-xl font-semibold shadow-sm active:scale-[0.98] transition-all text-sm"
           >
             {{ confirmText }}

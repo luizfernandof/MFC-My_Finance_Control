@@ -3,8 +3,10 @@ import { ref, onMounted, watch, computed, nextTick } from 'vue';
 import api from '../services/api';
 import DoughnutChart from '../components/DoughnutChart.vue';
 import { useBreakpoint } from '../composables/useBreakpoint';
+import { useTheme } from '../composables/useTheme';
 
 const { isMobile } = useBreakpoint();
+const { isDark } = useTheme();
 const now = new Date();
 const selectedMonth = ref(now.getMonth() + 1);
 const selectedYear = ref(now.getFullYear());
@@ -59,6 +61,43 @@ const chartData = computed(() => {
   };
 });
 
+const chartOptions = computed(() => {
+  const isSmallScreen = window.innerWidth < 768;
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '72%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        align: isSmallScreen ? 'start' : 'center',
+        labels: { 
+          padding: 20, 
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
+          boxWidth: 8,
+          textAlign: 'left',
+          font: { 
+            weight: 'bold', 
+            family: 'Inter, sans-serif',
+            size: isSmallScreen ? 11 : 13
+          },
+          color: isDark.value ? '#94a3b8' : '#475569'
+        }
+      },
+      tooltip: {
+        backgroundColor: isDark.value ? '#0f172a' : '#1e293b',
+        padding: 12,
+        cornerRadius: 10
+      }
+    },
+    layout: {
+      padding: isSmallScreen ? { left: 20, right: 20, bottom: 20 } : 0
+    }
+  };
+});
+
 async function fetchData() {
   loading.value = true;
   try {
@@ -99,46 +138,46 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
 
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
       <div class="w-full md:w-auto">
-        <h2 class="text-2xl md:text-3xl font-bold text-slate-800 italic uppercase tracking-tighter leading-tight">
+        <h2 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 italic uppercase tracking-tighter leading-tight">
           Dashboard
         </h2>
-        <p class="text-slate-400 text-xs font-medium mt-1">
+        <p class="text-slate-400 dark:text-slate-500 text-xs font-medium mt-1">
           {{ months[selectedMonth - 1]?.label }} {{ selectedYear }}
         </p>
       </div>
 
-      <div class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-100 h-9">
-        <select v-model="selectedMonth" class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer">
+      <div class="flex items-center gap-1 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 h-9">
+        <select v-model="selectedMonth" class="bg-transparent text-sm font-medium outline-none w-20 text-center appearance-none cursor-pointer dark:text-slate-300">
           <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
         </select>
-        <div class="w-px h-4 bg-slate-200"></div>
-        <select v-model="selectedYear" class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer">
+        <div class="w-px h-4 bg-slate-200 dark:bg-slate-600"></div>
+        <select v-model="selectedYear" class="bg-transparent text-sm font-medium outline-none text-center appearance-none w-14 cursor-pointer dark:text-slate-300">
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
-        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Entradas</span>
+      <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Entradas</span>
         <h3 class="text-2xl md:text-3xl font-bold text-emerald-500">R$ {{ (summary.totalIncome || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
-        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Saídas</span>
+      <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Saídas</span>
         <h3 class="text-2xl md:text-3xl font-bold text-rose-500">R$ {{ (summary.totalExpense || 0).toFixed(2) }}</h3>
       </div>
 
-      <div class="bg-white p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
-        <span class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Saldo</span>
-        <h3 :class="summary.balance >= 0 ? 'text-blue-600' : 'text-rose-600'" class="text-2xl md:text-3xl font-bold">
+      <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
+        <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">Saldo</span>
+        <h3 :class="summary.balance >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-rose-600 dark:text-rose-400'" class="text-2xl md:text-3xl font-bold">
           R$ {{ (summary.balance || 0).toFixed(2) }}
         </h3>
       </div>
     </div>
 
-    <div class="bg-white p-5 md:p-8 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center">
-      <h3 class="text-xs font-medium text-slate-400 uppercase tracking-wide mb-6 text-center italic">
+    <div class="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
+      <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-6 text-center italic">
         Distribuição de Gastos
       </h3>
 
@@ -147,8 +186,9 @@ const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
           v-if="expensesByCategory.length > 0"
           :key="chartKey"
           :chartData="chartData"
+          :chartOptions="chartOptions"
         />
-        <div v-else-if="!loading" class="text-center py-12 text-slate-300 italic text-sm">
+        <div v-else-if="!loading" class="text-center py-12 text-slate-300 dark:text-slate-600 italic text-sm">
           Nenhum registro encontrado para este período.
         </div>
         <div v-else class="text-center py-12">

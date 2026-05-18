@@ -31,7 +31,11 @@ import {
   faFileAlt,
   faUser,
   faSignOutAlt,
-  faCalendarAlt
+  faCalendarAlt,
+  faEye,
+  faEyeSlash,
+  faMoon,
+  faSun
 } from '@fortawesome/free-solid-svg-icons'
 
 // 3. Adicionando à biblioteca global
@@ -58,7 +62,11 @@ library.add(
   faFileAlt,
   faUser,
   faSignOutAlt,
-  faCalendarAlt
+  faCalendarAlt,
+  faEye,
+  faEyeSlash,
+  faMoon,
+  faSun
 )
 
 const app = createApp(App)
