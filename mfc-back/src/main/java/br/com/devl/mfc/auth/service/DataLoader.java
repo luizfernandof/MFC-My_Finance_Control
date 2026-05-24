@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import br.com.devl.mfc.auth.enums.UserRole;
 import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.auth.repository.UserRepository;
 
@@ -40,6 +41,8 @@ public class DataLoader implements CommandLineRunner {
             User user = new User();
             user.setEmail(seedEmail);
             user.setPassword(passwordEncoder.encode(seedPassword));
+            user.setRole(UserRole.ADMIN);
+            user.setEnabled(true);
 
             userRepository.save(user);
 

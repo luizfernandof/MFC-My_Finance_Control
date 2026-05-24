@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.entity.Transaction;
+import br.com.devl.mfc.entity.TransactionGroup;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
@@ -31,14 +33,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 	Optional<Transaction> findByIdAndUser(Long id, User user);
 
-	/**
-	 * Deleta todas as transações de um usuário que pertencem ao mesmo grupo
-	 * (parcelamento).
-	 */
-	@Modifying
+	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Transactional
-	@Query("DELETE FROM Transaction t WHERE t.groupId = :groupId AND t.user = :user")
-	void deleteByGroupIdAndUser(@Param("groupId") String groupId, @Param("user") User user);
+	@Query("UPDATE Transaction t SET t.active = false WHERE t.group = :group AND t.user = :user")
+	void deleteByGroupAndUser(@Param("group") TransactionGroup group, @Param("user") User user);
 
 	@Query("""
 			SELECT t from Transaction t
@@ -91,7 +89,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Transactional
-	@Query("DELETE FROM Transaction t WHERE t.groupId = :groupId AND t.user = :user AND t.date >= :startDate")
-	void deleteRecurrentFromGroupOnwards(@Param("groupId") String groupId, @Param("user") User user, @Param("startDate") java.time.LocalDate startDate);
+	@Query("UPDATE Transaction t SET t.active = false WHERE t.group = :group AND t.user = :user AND t.date >= :startDate")
+	void deleteRecurrentFromGroupOnwards(@Param("group") TransactionGroup group, @Param("user") User user, @Param("startDate") LocalDate startDate);
 
 }

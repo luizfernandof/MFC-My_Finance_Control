@@ -2,6 +2,7 @@ package br.com.devl.mfc.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.enums.TransactionType;
@@ -16,10 +17,14 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "transactions")
-public class Transaction {
+@SQLDelete(sql = "UPDATE transactions SET active = false WHERE id = ?")
+@SQLRestriction("active = true")
+public class Transaction extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,20 +43,20 @@ public class Transaction {
 	@Column(nullable = false)
 	private TransactionType type;
 
-	/**
-	 * Identificador único do grupo de parcelas. Transações únicas terão este campo
-	 * como null.
-	 */
-	@Column(name = "group_id")
-	private String groupId;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "transaction_group_id")
+	private TransactionGroup group;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "category_id", nullable = false)
 	private Category category;
 
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id", nullable = false)
 	private User user;
+
+	@Column(nullable = false)
+	private boolean active = true;
 
 	public Long getId() {
 		return id;
@@ -93,12 +98,12 @@ public class Transaction {
 		this.type = type;
 	}
 
-	public String getGroupId() {
-		return groupId;
+	public TransactionGroup getGroup() {
+		return group;
 	}
 
-	public void setGroupId(String groupId) {
-		this.groupId = groupId;
+	public void setGroup(TransactionGroup group) {
+		this.group = group;
 	}
 
 	public Category getCategory() {
@@ -117,4 +122,11 @@ public class Transaction {
 		this.user = user;
 	}
 
+	public boolean isActive() {
+		return active;
+	}
+
+	public void setActive(boolean active) {
+		this.active = active;
+	}
 }

@@ -2,7 +2,6 @@ package br.com.devl.mfc.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,8 +13,11 @@ import br.com.devl.mfc.dto.TransactionRequestDTO;
 import br.com.devl.mfc.dto.TransactionResponseDTO;
 import br.com.devl.mfc.entity.Category;
 import br.com.devl.mfc.entity.Transaction;
+import br.com.devl.mfc.entity.TransactionGroup;
+import br.com.devl.mfc.enums.TransactionGroupType;
 import br.com.devl.mfc.exception.BusinessException;
 import br.com.devl.mfc.repository.CategoryRepository;
+import br.com.devl.mfc.repository.TransactionGroupRepository;
 import br.com.devl.mfc.repository.TransactionRepository;
 
 @Service
@@ -23,10 +25,13 @@ public class TransactionService {
 
 	private final TransactionRepository transactionRepository;
 	private final CategoryRepository categoryRepository;
+	private final TransactionGroupRepository transactionGroupRepository;
 
-	public TransactionService(TransactionRepository transactionRepository, CategoryRepository categoryRepository) {
+	public TransactionService(TransactionRepository transactionRepository, CategoryRepository categoryRepository,
+			TransactionGroupRepository transactionGroupRepository) {
 		this.transactionRepository = transactionRepository;
 		this.categoryRepository = categoryRepository;
+		this.transactionGroupRepository = transactionGroupRepository;
 	}
 
 	@Transactional
@@ -36,7 +41,6 @@ public class TransactionService {
 
 		validateTransaction(dto, category);
 
-		// Determina o número de iterações (parcelas ou ocorrências recorrentes)
 		int iterations = 1;
 		if (dto.installments() != null && dto.installments() > 1) {
 			iterations = dto.installments();
@@ -44,12 +48,19 @@ public class TransactionService {
 			iterations = dto.occurrences();
 		}
 
-		// Gera um ID único para o grupo se houver repetição
-		String groupId = iterations > 1 ? UUID.randomUUID().toString() : null;
+		TransactionGroup group = null;
+		if (iterations > 1) {
+			group = new TransactionGroup();
+			group.setUser(user);
+			if (dto.installments() != null && dto.installments() > 1) {
+				group.setType(TransactionGroupType.INSTALLMENT);
+				group.setTotalInstallments(dto.installments());
+			} else if (dto.recurring()) {
+				group.setType(TransactionGroupType.RECURRING);
+			}
+			group = transactionGroupRepository.save(group);
+		}
 
-		// CÁLCULO DO VALOR:
-		// Se for parcelamento, divide o total. Se for recorrência (mensalidade), mantém
-		// o valor cheio.
 		BigDecimal valuePerEntry = (dto.installments() != null && dto.installments() > 1)
 				? dto.amount().divide(BigDecimal.valueOf(iterations), 2, RoundingMode.HALF_UP)
 				: dto.amount();
@@ -59,7 +70,6 @@ public class TransactionService {
 		for (int i = 0; i < iterations; i++) {
 			Transaction transaction = new Transaction();
 
-			// Define a descrição com sufixo apropriado
 			String suffix = "";
 			if (dto.installments() != null && dto.installments() > 1) {
 				suffix = " (" + (i + 1) + "/" + iterations + ")";
@@ -73,7 +83,7 @@ public class TransactionService {
 			transaction.setType(dto.type());
 			transaction.setCategory(category);
 			transaction.setUser(user);
-			transaction.setGroupId(groupId);
+			transaction.setGroup(group);
 
 			Transaction saved = transactionRepository.save(transaction);
 
@@ -121,9 +131,8 @@ public class TransactionService {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
 				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
 
-		// Exclui todo o grupo (parcelas ou recorrências) se existir um groupId
-		if (transaction.getGroupId() != null) {
-			transactionRepository.deleteByGroupIdAndUser(transaction.getGroupId(), user);
+		if (transaction.getGroup() != null) {
+			transactionRepository.deleteByGroupAndUser(transaction.getGroup(), user);
 		} else {
 			transactionRepository.delete(transaction);
 		}
@@ -134,17 +143,18 @@ public class TransactionService {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
 				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
 
-		if (transaction.getGroupId() == null) {
+		if (transaction.getGroup() == null) {
 			throw new BusinessException("Transação não pertence a um grupo recorrente");
 		}
 
-		transactionRepository.deleteRecurrentFromGroupOnwards(transaction.getGroupId(), user, transaction.getDate());
+		transactionRepository.deleteRecurrentFromGroupOnwards(transaction.getGroup(), user, transaction.getDate());
 	}
 
 	private TransactionResponseDTO toResponseDTO(Transaction transaction) {
+		String groupId = transaction.getGroup() != null ? transaction.getGroup().getId().toString() : null;
 		return new TransactionResponseDTO(transaction.getId(), transaction.getDescription(), transaction.getAmount(),
 				transaction.getDate(), transaction.getType(), transaction.getCategory().getName(),
-				transaction.getGroupId());
+				groupId);
 	}
 
 	private void validateTransaction(TransactionRequestDTO dto, Category category) {

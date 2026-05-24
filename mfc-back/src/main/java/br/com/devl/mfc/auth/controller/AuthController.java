@@ -18,6 +18,7 @@ import br.com.devl.mfc.auth.dto.LogoutRequest;
 import br.com.devl.mfc.auth.dto.RefreshTokenRequest;
 import br.com.devl.mfc.auth.dto.RefreshTokenResponse;
 import br.com.devl.mfc.auth.dto.RegisterRequest;
+import br.com.devl.mfc.auth.enums.UserRole;
 import br.com.devl.mfc.auth.entity.RefreshToken;
 import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.auth.repository.UserRepository;
@@ -55,6 +56,8 @@ public class AuthController {
 		User user = new User();
 		user.setEmail(request.getEmail());
 		user.setPassword(passwordEncoder.encode(request.getPassword()));
+		user.setRole(UserRole.USER);
+		user.setEnabled(true);
 		User savedUser = userRepository.save(user);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest().buildAndExpand(savedUser.getId()).toUri();
 		return ResponseEntity.created(location).build();
