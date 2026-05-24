@@ -19,7 +19,7 @@ SELECT DISTINCT
         WHEN t.description LIKE '%[Recorrente]%' THEN 'RECURRING'
         ELSE 'INSTALLMENT'
     END,
-    NULL,
+    NULL::INTEGER,
     NOW(),
     NOW()
 FROM transactions t
