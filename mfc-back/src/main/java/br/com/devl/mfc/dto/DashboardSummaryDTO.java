@@ -7,5 +7,8 @@ public record DashboardSummaryDTO(
 		BigDecimal totalIncome,
 		BigDecimal totalExpense,
 		BigDecimal balance,
-		List<CategoryExpenseDTO> expenseByCategory
+		List<CategoryExpenseDTO> expenseByCategory,
+		BigDecimal previousIncome,
+		BigDecimal previousExpense,
+		BigDecimal previousBalance
 ) {}

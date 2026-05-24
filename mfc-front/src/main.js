@@ -35,7 +35,11 @@ import {
   faEye,
   faEyeSlash,
   faMoon,
-  faSun
+  faSun,
+  faArrowUp,
+  faArrowDown,
+  faDownload,
+  faArrowRightLong
 } from '@fortawesome/free-solid-svg-icons'
 
 // 3. Adicionando à biblioteca global
@@ -66,7 +70,11 @@ library.add(
   faEye,
   faEyeSlash,
   faMoon,
-  faSun
+  faSun,
+  faArrowUp,
+  faArrowDown,
+  faDownload,
+  faArrowRightLong
 )
 
 const app = createApp(App)

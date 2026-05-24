@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -91,5 +90,27 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 	@Transactional
 	@Query("UPDATE Transaction t SET t.active = false WHERE t.group = :group AND t.user = :user AND t.date >= :startDate")
 	void deleteRecurrentFromGroupOnwards(@Param("group") TransactionGroup group, @Param("user") User user, @Param("startDate") LocalDate startDate);
+
+	@Query("""
+			SELECT MONTH(t.date), YEAR(t.date), SUM(t.amount)
+			FROM Transaction t
+			WHERE t.type = 'INCOME'
+			AND t.user = :user
+			AND t.date BETWEEN :start AND :end
+			GROUP BY YEAR(t.date), MONTH(t.date)
+			ORDER BY YEAR(t.date), MONTH(t.date)
+			""")
+	List<Object[]> sumIncomeByMonthRange(@Param("user") User user, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+	@Query("""
+			SELECT MONTH(t.date), YEAR(t.date), SUM(t.amount)
+			FROM Transaction t
+			WHERE t.type = 'EXPENSE'
+			AND t.user = :user
+			AND t.date BETWEEN :start AND :end
+			GROUP BY YEAR(t.date), MONTH(t.date)
+			ORDER BY YEAR(t.date), MONTH(t.date)
+			""")
+	List<Object[]> sumExpenseByMonthRange(@Param("user") User user, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
 }
