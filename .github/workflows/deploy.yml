@@ -34,7 +34,7 @@ jobs:
         run: |
           for attempt in $(seq 1 12); do
             if docker compose --env-file /home/actions/.env exec -T mfc-front \
-              wget -q -O - http://localhost:8080/api/actuator/health; then
+              wget -q -O - http://127.0.0.1:8080/api/actuator/health; then
               exit 0
             fi
             sleep 5
