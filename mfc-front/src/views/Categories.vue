@@ -1,13 +1,22 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onBeforeUnmount, onMounted, watch } from 'vue';
 import api from '../services/api';
 import { useBreakpoint } from '../composables/useBreakpoint';
 import BaseInput from '../components/BaseInput.vue';
 import ConfirmModal from '../components/ConfirmModal.vue';
+import PaginationControls from '../components/PaginationControls.vue';
+import { getApiErrorMessage } from '../utils/apiError';
+import { parsePageResponse } from '../utils/page';
+import { useEscapeClose } from '../composables/useEscapeClose';
 
 const { isMobile } = useBreakpoint();
 
 const categories = ref([]);
+const searchTerm = ref('');
+const currentPage = ref(0);
+const pageSize = ref(10);
+const totalElements = ref(0);
+const totalPages = ref(0);
 const loading = ref(false);
 const apiErrorMessage = ref('');
 const errors = ref({ name: '' });
@@ -19,6 +28,9 @@ const showNoticeModal = ref(false);
 const categoryForm = ref({ id: null, name: '', type: 'EXPENSE' });
 const isEditing = ref(false);
 const categoryToDelete = ref(null);
+let requestSequence = 0;
+let searchDebounce;
+useEscapeClose(showFormModal, () => { showFormModal.value = false; });
 
 function validateForm() {
   errors.value.name = '';
@@ -30,14 +42,33 @@ function validateForm() {
 }
 
 async function fetchCategories() {
+  const requestId = ++requestSequence;
   loading.value = true;
   try {
-    const response = await api.get('/categories');
-    categories.value = response.data;
+    const response = await api.get('/categories', {
+      params: {
+        search: searchTerm.value.trim(),
+        page: currentPage.value,
+        size: pageSize.value,
+        sort: 'name,asc'
+      }
+    });
+    if (requestId !== requestSequence) return;
+
+    const page = parsePageResponse(response.data);
+    if (page.totalPages > 0 && currentPage.value >= page.totalPages) {
+      currentPage.value = page.totalPages - 1;
+      return;
+    }
+    categories.value = page.content;
+    totalElements.value = page.totalElements;
+    totalPages.value = page.totalPages;
   } catch (error) {
-    showError("Erro ao carregar categorias");
+    if (requestId === requestSequence) {
+      showError(getApiErrorMessage(error, 'Erro ao carregar categorias.'));
+    }
   } finally {
-    loading.value = false;
+    if (requestId === requestSequence) loading.value = false;
   }
 }
 
@@ -53,7 +84,7 @@ async function saveCategory() {
     resetForm();
     fetchCategories();
   } catch (error) {
-    const msg = error.response?.data?.message || "Erro inesperado ao processar.";
+	    const msg = getApiErrorMessage(error, 'Erro inesperado ao processar.');
     showError(msg);
   }
 }
@@ -70,7 +101,7 @@ async function confirmDelete() {
       showDeleteConfirm.value = false;
       fetchCategories();
     } catch (error) {
-      showError("Não foi possível excluir. Verifique se existem transações vinculadas.");
+      showError(getApiErrorMessage(error, 'Não foi possível excluir. Verifique se existem transações vinculadas.'));
     }
   }
 }
@@ -90,6 +121,23 @@ function resetForm() {
 }
 function showError(msg) { apiErrorMessage.value = msg; showNoticeModal.value = true; }
 
+watch(searchTerm, () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    if (currentPage.value === 0) fetchCategories();
+    else currentPage.value = 0;
+  }, 350);
+});
+
+watch(pageSize, () => {
+  if (currentPage.value === 0) fetchCategories();
+  else currentPage.value = 0;
+});
+
+watch(currentPage, fetchCategories);
+
+onBeforeUnmount(() => clearTimeout(searchDebounce));
+
 onMounted(fetchCategories);
 </script>
 
@@ -107,9 +155,31 @@ onMounted(fetchCategories);
         <font-awesome-icon icon="fa-solid fa-plus" class="text-sm" />
         <span>Nova Categoria</span>
       </button>
+	    </div>
+
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="relative w-full sm:max-w-md">
+        <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-300 dark:text-slate-500" />
+        <input
+          v-model="searchTerm"
+          type="search"
+          maxlength="100"
+          aria-label="Buscar categorias"
+          placeholder="Buscar categoria por nome"
+          class="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
+        />
+      </div>
+      <span class="text-xs font-medium text-slate-400 dark:text-slate-500">
+        {{ totalElements }} {{ totalElements === 1 ? 'categoria' : 'categorias' }}
+      </span>
     </div>
 
-    <div v-if="!isMobile" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+	    <div v-if="loading" class="py-12 text-center text-sm font-medium text-slate-400">Carregando categorias...</div>
+	    <div v-else-if="categories.length === 0" class="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-sm text-slate-400 dark:border-slate-700">
+	      {{ searchTerm.trim() ? 'Nenhuma categoria encontrada para a busca.' : 'Nenhuma categoria cadastrada.' }}
+	    </div>
+
+	    <div v-else-if="!isMobile" class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
       <table class="w-full text-left">
         <thead class="bg-slate-50 dark:bg-slate-700/50 text-xs font-semibold text-slate-400 dark:text-slate-400 uppercase tracking-wide">
           <tr>
@@ -138,7 +208,7 @@ onMounted(fetchCategories);
       </table>
     </div>
 
-    <div v-else class="space-y-2">
+    <div v-else-if="!loading && categories.length > 0" class="space-y-2">
       <div v-for="cat in categories" :key="cat.id" class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex justify-between items-center">
         <div class="flex flex-col">
           <span class="text-sm font-semibold text-slate-700 dark:text-slate-200 italic">{{ cat.name }}</span>
@@ -153,18 +223,26 @@ onMounted(fetchCategories);
       </div>
     </div>
 
-    <div v-if="showFormModal" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+    <PaginationControls
+      v-if="!loading && totalElements > 0"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :total-pages="totalPages"
+      :total-elements="totalElements"
+    />
+
+    <div v-if="showFormModal" role="dialog" aria-modal="true" aria-labelledby="category-modal-title" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
       <div class="bg-white dark:bg-slate-800 rounded-t-3xl md:rounded-2xl shadow-2xl w-full max-w-md p-6 border border-white dark:border-slate-700">
         <div class="flex justify-between items-center mb-6">
-          <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100 italic tracking-tight">{{ isEditing ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
-          <button @click="showFormModal = false" class="text-slate-300 hover:text-slate-500 dark:text-slate-500 dark:hover:text-slate-300 text-xl"><font-awesome-icon icon="fa-solid fa-xmark" /></button>
+          <h2 id="category-modal-title" class="text-xl font-bold text-slate-800 dark:text-slate-100 italic tracking-tight">{{ isEditing ? 'Editar Categoria' : 'Nova Categoria' }}</h2>
+          <button type="button" aria-label="Fechar categoria" @click="showFormModal = false" class="text-slate-300 hover:text-slate-500 dark:text-slate-500 dark:hover:text-slate-300 text-xl"><font-awesome-icon icon="fa-solid fa-xmark" /></button>
         </div>
 
         <form @submit.prevent="saveCategory" class="space-y-5">
           <BaseInput label="Nome da Categoria" v-model="categoryForm.name" placeholder="Ex: Lazer" :error="errors.name" />
           <div>
-            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">Tipo de Fluxo</label>
-            <select v-model="categoryForm.type" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none">
+            <label for="category-type" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">Tipo de Fluxo</label>
+            <select id="category-type" v-model="categoryForm.type" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-700 dark:text-slate-200 appearance-none">
               <option value="EXPENSE">Despesa (Saída)</option>
               <option value="INCOME">Receita (Entrada)</option>
             </select>

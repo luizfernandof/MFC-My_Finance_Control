@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onBeforeUnmount, onMounted, watch } from 'vue';
 import api from '../services/api';
 import { useBreakpoint } from '../composables/useBreakpoint';
 
@@ -7,6 +7,11 @@ import TransactionTableDesktop from '../components/TransactionTableDesktop.vue';
 import TransactionCardsMobile from '../components/TransactionCardsMobile.vue';
 import TransactionModal from '../components/TransactionModal.vue';
 import ConfirmModal from '../components/ConfirmModal.vue';
+import GroupDeleteModal from '../components/GroupDeleteModal.vue';
+import PaginationControls from '../components/PaginationControls.vue';
+import { months, years } from '../composables/usePeriodOptions';
+import { getApiErrorMessage } from '../utils/apiError';
+import { parsePageResponse } from '../utils/page';
 
 const { isMobile } = useBreakpoint();
 
@@ -14,6 +19,7 @@ const transactions = ref([]);
 const categories = ref([]);
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
+const searchTerm = ref('');
 
 const selectedSort = ref('date,desc');
 const sortOptions = [
@@ -33,7 +39,11 @@ const showFormModal = ref(false);
 const isEditing = ref(false);
 const apiErrorMessage = ref('');
 const showConfirmModal = ref(false);
+const showGroupDeleteModal = ref(false);
 const transactionToDelete = ref(null);
+const loadError = ref('');
+let requestSequence = 0;
+let searchDebounce;
 
 const initialForm = {
   id: null, description: '', amount: '', date: new Date().toISOString().split('T')[0],
@@ -43,19 +53,22 @@ const transactionForm = ref({ ...initialForm });
 
 async function fetchCategories() {
   try {
-    const responseCategories = await api.get('/categories');
+    const responseCategories = await api.get('/categories/options');
     categories.value = responseCategories.data || [];
-  } catch (e) {
-    console.error("Erro ao carregar categorias:", e);
+	  } catch (e) {
+	    loadError.value = getApiErrorMessage(e, 'Não foi possível carregar as categorias.');
   }
 }
 
 async function fetchTransactions() {
-  loading.value = true;
+	  const requestId = ++requestSequence;
+	  loading.value = true;
+	  loadError.value = '';
   try {
     const params = {
       month: selectedMonth.value,
       year: selectedYear.value,
+      search: searchTerm.value.trim(),
       page: currentPage.value,
       size: pageSize.value,
       sort: selectedSort.value
@@ -63,32 +76,43 @@ async function fetchTransactions() {
 
     const responseTransactions = await api.get('/transactions', { params });
 
-    const data = responseTransactions.data || {};
-    transactions.value = data.content || [];
-
-    const page = data.page || {};
-    totalElements.value = Number(page.totalElements) || 0;
-    totalPages.value = Number(page.totalPages) || 0;
-  } catch (e) {
-    console.error("Erro ao carregar transações:", e);
-  } finally {
-    loading.value = false;
-  }
+	    if (requestId !== requestSequence) return;
+	    const page = parsePageResponse(responseTransactions.data);
+    if (page.totalPages > 0 && currentPage.value >= page.totalPages) {
+      currentPage.value = page.totalPages - 1;
+      return;
+    }
+    transactions.value = page.content;
+    totalElements.value = page.totalElements;
+    totalPages.value = page.totalPages;
+	  } catch (e) {
+	    if (requestId === requestSequence) {
+	      loadError.value = getApiErrorMessage(e, 'Não foi possível carregar as transações.');
+	    }
+	  } finally {
+	    if (requestId === requestSequence) loading.value = false;
+	  }
 }
 
-watch([selectedMonth, selectedYear, pageSize, currentPage, selectedSort], () => {
-  fetchTransactions();
-});
-
 watch([selectedMonth, selectedYear, pageSize, selectedSort], () => {
-  currentPage.value = 0;
+	  if (currentPage.value === 0) fetchTransactions();
+	  else currentPage.value = 0;
 });
 
-watch(isMobile, (newVal) => {
-  pageSize.value = newVal ? 1000 : 10;
-}, { immediate: true });
+watch(currentPage, fetchTransactions);
+
+watch(searchTerm, () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    if (currentPage.value === 0) fetchTransactions();
+    else currentPage.value = 0;
+  }, 350);
+});
+
+onBeforeUnmount(() => clearTimeout(searchDebounce));
 
 function openCreate() {
+	  apiErrorMessage.value = '';
   isEditing.value = false;
   transactionForm.value = { ...initialForm };
   showFormModal.value = true;
@@ -111,29 +135,30 @@ async function handleSave(payload) {
     }
     showFormModal.value = false;
     fetchTransactions();
-  } catch (error) {
-    apiErrorMessage.value = error.response?.data?.message || "Erro no servidor.";
-  }
+	  } catch (error) {
+	    apiErrorMessage.value = getApiErrorMessage(error, 'Erro no servidor.');
+	  }
 }
 
 function openDeleteConfirm(t) {
-  transactionToDelete.value = t;
-  showConfirmModal.value = true;
+	  transactionToDelete.value = t;
+	  if (t.groupId) showGroupDeleteModal.value = true;
+	  else showConfirmModal.value = true;
 }
 
-async function confirmDelete() {
-  if (!transactionToDelete.value) return;
-  try {
-    const endpoint = transactionToDelete.value.groupId
-      ? `/transactions/${transactionToDelete.value.id}/recurrent-forward`
-      : `/transactions/${transactionToDelete.value.id}`;
-    await api.delete(endpoint);
-    showConfirmModal.value = false;
-    transactionToDelete.value = null;
-    fetchTransactions();
-  } catch (e) {
-    console.error(e);
-  }
+async function confirmDelete(scope = 'single') {
+	  if (!transactionToDelete.value) return;
+	  try {
+	    const base = `/transactions/${transactionToDelete.value.id}`;
+	    const endpoint = scope === 'all' ? `${base}/group` : scope === 'forward' ? `${base}/group-forward` : base;
+	    await api.delete(endpoint);
+	    showConfirmModal.value = false;
+	    showGroupDeleteModal.value = false;
+	    transactionToDelete.value = null;
+	    fetchTransactions();
+	  } catch (e) {
+	    loadError.value = getApiErrorMessage(e, 'Não foi possível excluir a transação.');
+	  }
 }
 
 onMounted(async () => {
@@ -141,13 +166,6 @@ onMounted(async () => {
   await fetchTransactions();
 });
 
-const months = [
-  { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' }, { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' }, { value: 5, label: 'Maio' }, { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' }, { value: 8, label: 'Agosto' }, { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' }, { value: 11, label: 'Novembro' }, { value: 12, label: 'Dezembro' }
-];
-const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
 </script>
 
 <template>
@@ -164,35 +182,6 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
       </div>
 
       <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-
-        <div v-if="!isMobile"
-          class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
-          <button @click="currentPage--" :disabled="currentPage === 0 || totalPages === 0"
-            class="px-2 text-blue-600 dark:text-blue-400 disabled:text-slate-200 dark:disabled:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
-            <font-awesome-icon icon="arrow-left" class="text-sm" />
-          </button>
-          <span class="text-xs font-medium text-slate-500 dark:text-slate-400 mx-2 whitespace-nowrap">
-            {{ totalPages ? (currentPage + 1) : 0 }}/{{ totalPages || 0 }}
-          </span>
-          <button @click="currentPage++" :disabled="currentPage >= totalPages - 1 || totalPages === 0"
-            class="px-2 text-blue-600 dark:text-blue-400 disabled:text-slate-200 dark:disabled:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 transition-all active:scale-95">
-            <font-awesome-icon icon="arrow-right" class="text-sm" />
-          </button>
-        </div>
-
-        <div v-if="!isMobile"
-          class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
-          <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mr-2">Exibir</span>
-          <select v-model="pageSize"
-            class="bg-transparent text-sm font-medium outline-none cursor-pointer text-blue-600 dark:text-blue-400 appearance-none w-10 text-center">
-            <option :value="5">05</option>
-            <option :value="10">10</option>
-            <option :value="15">15</option>
-            <option :value="30">30</option>
-            <option :value="50">50</option>
-          </select>
-        </div>
-
         <div v-if="!isMobile"
           class="flex items-center bg-white dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-100 dark:border-slate-700 shadow-sm h-9">
           <span class="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mr-2">Ordenar</span>
@@ -220,24 +209,59 @@ const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i);
           <span>Novo</span>
         </button>
 
-        <span v-if="isMobile" class="text-xs font-medium text-slate-400 dark:text-slate-500 self-center ml-2">
-          {{ totalElements }} registros
-        </span>
       </div>
+	    </div>
+
+    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div class="relative w-full sm:max-w-lg">
+        <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-300 dark:text-slate-500" />
+        <input
+          v-model="searchTerm"
+          type="search"
+          maxlength="100"
+          aria-label="Buscar transações"
+          placeholder="Buscar por descrição ou categoria"
+          class="h-11 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition-all placeholder:text-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:placeholder:text-slate-500"
+        />
+      </div>
+      <span class="text-xs font-medium text-slate-400 dark:text-slate-500">
+        {{ totalElements }} {{ totalElements === 1 ? 'transação' : 'transações' }}
+      </span>
     </div>
 
-    <div class="flex-grow">
+	    <div v-if="loadError" role="alert" class="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-600 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-400">
+	      {{ loadError }}
+	    </div>
+
+	    <div v-if="loading" class="flex-grow py-16 text-center text-sm font-medium text-slate-400">
+	      Carregando transações...
+	    </div>
+	    <div v-else-if="transactions.length === 0" class="flex-grow rounded-2xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400 dark:border-slate-700">
+	      {{ searchTerm.trim() ? 'Nenhuma transação encontrada para a busca neste período.' : 'Nenhuma transação encontrada para este período.' }}
+	    </div>
+	    <div v-else class="flex-grow">
       <TransactionTableDesktop v-if="!isMobile" :transactions="transactions" @edit="prepareEdit"
         @delete="openDeleteConfirm" />
       <TransactionCardsMobile v-else :transactions="transactions" @edit="prepareEdit" @delete="openDeleteConfirm" />
     </div>
 
+    <PaginationControls
+      v-if="!loading && totalElements > 0"
+      v-model:current-page="currentPage"
+      v-model:page-size="pageSize"
+      :total-pages="totalPages"
+      :total-elements="totalElements"
+    />
+
     <TransactionModal :show="showFormModal" :editing="isEditing" :categories="categories" :initialData="transactionForm"
       :apiError="apiErrorMessage" @close="showFormModal = false" @save="handleSave" />
 
-    <ConfirmModal :show="showConfirmModal" title="Excluir Registro?"
+	    <ConfirmModal :show="showConfirmModal" title="Excluir Registro?"
       :message="`Deseja realmente excluir '${transactionToDelete?.description}'?`" confirmText="Sim, Excluir"
-      @close="showConfirmModal = false" @confirm="confirmDelete" />
+	      @close="showConfirmModal = false" @confirm="confirmDelete" />
+
+	    <GroupDeleteModal :show="showGroupDeleteModal" :transaction="transactionToDelete"
+	      @close="showGroupDeleteModal = false" @confirm="confirmDelete" />
 
   </div>
 </template>

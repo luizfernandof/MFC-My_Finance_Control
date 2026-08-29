@@ -34,7 +34,9 @@ public class DashboardService {
 
 	public DashboardSummaryDTO getSummary(int month, int year) {
 		String email = SecurityContextHolder.getContext().getAuthentication().getName();
-		User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+		User user = userRepository.findByEmailIgnoreCase(email)
+				.orElseThrow(() -> new br.com.devl.mfc.exception.BusinessException("USER_NOT_FOUND",
+						"Usuário não encontrado", org.springframework.http.HttpStatus.NOT_FOUND));
 
 		BigDecimal rawIncome = repository.sumIncomeByMonth(user, month, year);
 		BigDecimal rawExpense = repository.sumExpenseByMonth(user, month, year);

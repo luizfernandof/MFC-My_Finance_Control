@@ -2,6 +2,7 @@ package br.com.devl.mfc.repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,18 +25,22 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 			WHERE t.user = :user
 			AND MONTH(t.date) = :month
 			AND YEAR(t.date) = :year
+			AND (
+				:search = ''
+				OR LOWER(t.description) LIKE LOWER(CONCAT('%', :search, '%'))
+				OR LOWER(t.category.name) LIKE LOWER(CONCAT('%', :search, '%'))
+			)
 			""")
 	Page<Transaction> findByUserAndMonthAndYear(@Param("user") User user, @Param("month") int month,
-			@Param("year") int year, Pageable pageable);
-
-	List<Transaction> findByUser(User user);
+			@Param("year") int year, @Param("search") String search, Pageable pageable);
 
 	Optional<Transaction> findByIdAndUser(Long id, User user);
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Transactional
-	@Query("UPDATE Transaction t SET t.active = false WHERE t.group = :group AND t.user = :user")
-	void deleteByGroupAndUser(@Param("group") TransactionGroup group, @Param("user") User user);
+	@Query("UPDATE Transaction t SET t.active = false, t.updatedAt = :updatedAt WHERE t.group = :group AND t.user = :user")
+	void deleteByGroupAndUser(@Param("group") TransactionGroup group, @Param("user") User user,
+			@Param("updatedAt") Instant updatedAt);
 
 	@Query("""
 			SELECT t from Transaction t
@@ -88,8 +93,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 	@Modifying(clearAutomatically = true, flushAutomatically = true)
 	@Transactional
-	@Query("UPDATE Transaction t SET t.active = false WHERE t.group = :group AND t.user = :user AND t.date >= :startDate")
-	void deleteRecurrentFromGroupOnwards(@Param("group") TransactionGroup group, @Param("user") User user, @Param("startDate") LocalDate startDate);
+	@Query("UPDATE Transaction t SET t.active = false, t.updatedAt = :updatedAt WHERE t.group = :group AND t.user = :user AND t.date >= :startDate")
+	void deleteFromGroupOnwards(@Param("group") TransactionGroup group, @Param("user") User user,
+			@Param("startDate") LocalDate startDate, @Param("updatedAt") Instant updatedAt);
 
 	@Query("""
 			SELECT MONTH(t.date), YEAR(t.date), SUM(t.amount)

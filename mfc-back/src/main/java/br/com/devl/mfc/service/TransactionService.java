@@ -2,9 +2,13 @@ package br.com.devl.mfc.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,7 @@ import br.com.devl.mfc.repository.TransactionRepository;
 
 @Service
 public class TransactionService {
+	private static final Pattern GROUP_SUFFIX = Pattern.compile("\\s*(\\(\\d+/\\d+\\)|\\[Recorrente])$");
 
 	private final TransactionRepository transactionRepository;
 	private final CategoryRepository categoryRepository;
@@ -37,33 +42,30 @@ public class TransactionService {
 	@Transactional
 	public TransactionResponseDTO create(TransactionRequestDTO dto, User user) {
 		Category category = categoryRepository.findByIdAndUser(dto.categoryId(), user)
-				.orElseThrow(() -> new BusinessException("Categoria não encontrada"));
+					.orElseThrow(() -> new BusinessException("CATEGORY_NOT_FOUND", "Categoria não encontrada",
+							HttpStatus.NOT_FOUND));
 
 		validateTransaction(dto, category);
 
-		int iterations = 1;
-		if (dto.installments() != null && dto.installments() > 1) {
-			iterations = dto.installments();
-		} else if (dto.recurring() && dto.occurrences() != null && dto.occurrences() > 1) {
-			iterations = dto.occurrences();
-		}
+		int installments = dto.installments() == null ? 1 : dto.installments();
+		int iterations = installments > 1 ? installments : dto.recurring() ? dto.occurrences() : 1;
 
 		TransactionGroup group = null;
 		if (iterations > 1) {
 			group = new TransactionGroup();
 			group.setUser(user);
-			if (dto.installments() != null && dto.installments() > 1) {
+			if (installments > 1) {
 				group.setType(TransactionGroupType.INSTALLMENT);
-				group.setTotalInstallments(dto.installments());
+				group.setTotalInstallments(installments);
 			} else if (dto.recurring()) {
 				group.setType(TransactionGroupType.RECURRING);
 			}
 			group = transactionGroupRepository.save(group);
 		}
 
-		BigDecimal valuePerEntry = (dto.installments() != null && dto.installments() > 1)
-				? dto.amount().divide(BigDecimal.valueOf(iterations), 2, RoundingMode.HALF_UP)
-				: dto.amount();
+		BigDecimal valuePerEntry = installments > 1
+					? dto.amount().divide(BigDecimal.valueOf(iterations), 2, RoundingMode.DOWN)
+					: dto.amount();
 
 		Transaction firstSaved = null;
 
@@ -71,14 +73,17 @@ public class TransactionService {
 			Transaction transaction = new Transaction();
 
 			String suffix = "";
-			if (dto.installments() != null && dto.installments() > 1) {
+				if (installments > 1) {
 				suffix = " (" + (i + 1) + "/" + iterations + ")";
 			} else if (dto.recurring()) {
 				suffix = " [Recorrente]";
 			}
 
-			transaction.setDescription(dto.description() + suffix);
-			transaction.setAmount(valuePerEntry);
+				transaction.setDescription(dto.description().trim() + suffix);
+				BigDecimal entryAmount = installments > 1 && i == iterations - 1
+						? dto.amount().subtract(valuePerEntry.multiply(BigDecimal.valueOf(iterations - 1)))
+						: valuePerEntry;
+				transaction.setAmount(entryAmount);
 			transaction.setDate(dto.date().plusMonths(i));
 			transaction.setType(dto.type());
 			transaction.setCategory(category);
@@ -95,27 +100,34 @@ public class TransactionService {
 		return toResponseDTO(firstSaved);
 	}
 
-	public Page<TransactionResponseDTO> list(User user, int month, int year, Pageable pageable) {
-		return transactionRepository.findByUserAndMonthAndYear(user, month, year, pageable).map(this::toResponseDTO);
+	@Transactional(readOnly = true)
+	public Page<TransactionResponseDTO> list(User user, int month, int year, String search, Pageable pageable) {
+		String normalizedSearch = search == null ? "" : search.trim();
+		return transactionRepository.findByUserAndMonthAndYear(user, month, year, normalizedSearch, pageable)
+				.map(this::toResponseDTO);
 	}
 
+	@Transactional(readOnly = true)
 	public TransactionResponseDTO findById(Long id, User user) {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
-				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
+					.orElseThrow(() -> new BusinessException("TRANSACTION_NOT_FOUND", "Transação não encontrada",
+							HttpStatus.NOT_FOUND));
 		return toResponseDTO(transaction);
 	}
 
 	@Transactional
 	public TransactionResponseDTO update(Long id, TransactionRequestDTO dto, User user) {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
-				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
+					.orElseThrow(() -> new BusinessException("TRANSACTION_NOT_FOUND", "Transação não encontrada",
+							HttpStatus.NOT_FOUND));
 
 		Category category = categoryRepository.findByIdAndUser(dto.categoryId(), user)
-				.orElseThrow(() -> new BusinessException("Categoria não encontrada"));
+					.orElseThrow(() -> new BusinessException("CATEGORY_NOT_FOUND", "Categoria não encontrada",
+							HttpStatus.NOT_FOUND));
 
 		validateTransaction(dto, category);
 
-		transaction.setDescription(dto.description());
+		transaction.setDescription(descriptionWithExistingGroupSuffix(dto.description(), transaction));
 		transaction.setAmount(dto.amount());
 		transaction.setDate(dto.date());
 		transaction.setType(dto.type());
@@ -129,36 +141,47 @@ public class TransactionService {
 	@Transactional
 	public void delete(Long id, User user) {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
-				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
-
-		if (transaction.getGroup() != null) {
-			transactionRepository.deleteByGroupAndUser(transaction.getGroup(), user);
-		} else {
-			transactionRepository.delete(transaction);
-		}
+					.orElseThrow(() -> new BusinessException("TRANSACTION_NOT_FOUND", "Transação não encontrada",
+							HttpStatus.NOT_FOUND));
+		transactionRepository.delete(transaction);
 	}
 
 	@Transactional
-	public void deleteRecurrentForward(Long id, User user) {
+	public void deleteGroupForward(Long id, User user) {
 		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
-				.orElseThrow(() -> new BusinessException("Transação não encontrada"));
+					.orElseThrow(() -> new BusinessException("TRANSACTION_NOT_FOUND", "Transação não encontrada",
+							HttpStatus.NOT_FOUND));
 
 		if (transaction.getGroup() == null) {
-			throw new BusinessException("Transação não pertence a um grupo recorrente");
+			throw new BusinessException("TRANSACTION_NOT_GROUPED", "Transação não pertence a um grupo",
+					HttpStatus.BAD_REQUEST);
 		}
 
-		transactionRepository.deleteRecurrentFromGroupOnwards(transaction.getGroup(), user, transaction.getDate());
+		transactionRepository.deleteFromGroupOnwards(transaction.getGroup(), user, transaction.getDate(), Instant.now());
+	}
+
+	@Transactional
+	public void deleteGroup(Long id, User user) {
+		Transaction transaction = transactionRepository.findByIdAndUser(id, user)
+				.orElseThrow(() -> new BusinessException("TRANSACTION_NOT_FOUND", "Transação não encontrada",
+						HttpStatus.NOT_FOUND));
+		if (transaction.getGroup() == null) {
+			throw new BusinessException("TRANSACTION_NOT_GROUPED", "Transação não pertence a um grupo",
+					HttpStatus.BAD_REQUEST);
+		}
+		transactionRepository.deleteByGroupAndUser(transaction.getGroup(), user, Instant.now());
 	}
 
 	private TransactionResponseDTO toResponseDTO(Transaction transaction) {
 		String groupId = transaction.getGroup() != null ? transaction.getGroup().getId().toString() : null;
+		TransactionGroupType groupType = transaction.getGroup() != null ? transaction.getGroup().getType() : null;
 		return new TransactionResponseDTO(transaction.getId(), transaction.getDescription(), transaction.getAmount(),
-				transaction.getDate(), transaction.getType(), transaction.getCategory().getName(),
-				groupId);
+					transaction.getDate(), transaction.getType(), transaction.getCategory().getName(),
+					groupId, groupType);
 	}
 
 	private void validateTransaction(TransactionRequestDTO dto, Category category) {
-		if (!category.getType().toString().equals(dto.type().toString())) {
+		if (!category.getType().name().equals(dto.type().name())) {
 			throw new BusinessException("O tipo da transação deve ser igual ao tipo da categoria!");
 		}
 
@@ -166,8 +189,28 @@ public class TransactionService {
 			throw new BusinessException("O valor deve ser maior que zero(0)!");
 		}
 
-		if (dto.date() == null) {
-			throw new BusinessException("Data é obrigatória!");
+		int installments = dto.installments() == null ? 1 : dto.installments();
+		if (dto.recurring() && installments > 1) {
+			throw new BusinessException("INVALID_GROUP_OPTIONS", "Uma transação não pode ser parcelada e recorrente ao mesmo tempo.",
+					HttpStatus.BAD_REQUEST);
 		}
+		if (dto.recurring() && dto.occurrences() == null) {
+			throw new BusinessException("O número de ocorrências é obrigatório para uma transação recorrente.");
+		}
+		if (!dto.recurring() && dto.occurrences() != null) {
+			throw new BusinessException("Ocorrências só podem ser informadas em uma transação recorrente.");
+		}
+		if (installments > 1 && dto.type() != br.com.devl.mfc.enums.TransactionType.EXPENSE) {
+			throw new BusinessException("Somente despesas podem ser parceladas.");
+		}
+	}
+
+	private String descriptionWithExistingGroupSuffix(String description, Transaction transaction) {
+		String normalized = GROUP_SUFFIX.matcher(description.trim()).replaceFirst("").trim();
+		if (transaction.getGroup() == null) {
+			return normalized;
+		}
+		Matcher matcher = GROUP_SUFFIX.matcher(transaction.getDescription());
+		return matcher.find() ? normalized + " " + matcher.group(1) : normalized;
 	}
 }

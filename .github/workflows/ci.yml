@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mfc-back
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Testar e empacotar backend
+        run: ./mvnw verify --batch-mode
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mfc-front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mfc-front/package-lock.json
+      - run: npm ci
+      - name: Testar frontend
+        run: npm test
+      - name: Validar código
+        run: npm run lint -- --quiet
+      - name: Gerar build
+        run: npm run build
+      - name: Auditar dependências de produção
+        run: npm audit --omit=dev --audit-level=high

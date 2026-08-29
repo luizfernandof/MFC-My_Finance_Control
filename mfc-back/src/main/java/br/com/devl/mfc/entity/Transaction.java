@@ -22,7 +22,7 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "transactions")
-@SQLDelete(sql = "UPDATE transactions SET active = false WHERE id = ?")
+@SQLDelete(sql = "UPDATE transactions SET active = false, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("active = true")
 public class Transaction extends BaseEntity {
 

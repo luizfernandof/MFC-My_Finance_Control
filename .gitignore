@@ -40,6 +40,9 @@ mfc-front/yarn-error.log*
 mfc-front/.pnp/
 mfc-front/.pnp.js
 
+# --- Artefatos gerados em testes manuais ---
+output/
+
 # --- Docker ---
 .docker/
 */data/

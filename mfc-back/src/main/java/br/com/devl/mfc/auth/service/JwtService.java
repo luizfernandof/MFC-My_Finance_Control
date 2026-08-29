@@ -1,6 +1,5 @@
 package br.com.devl.mfc.auth.service;
 
-import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 
@@ -36,16 +35,6 @@ public class JwtService {
 				)
 				.signWith(key, SignatureAlgorithm.HS256)
 				.compact();
-	}
-	
-	public Instant getExpirationToken(String token) {
-		return Jwts.parserBuilder()
-				.setSigningKey(key)
-				.build()
-				.parseClaimsJws(token)
-				.getBody()
-				.getExpiration()
-				.toInstant();
 	}
 	
 	public String getEmail(String token) {

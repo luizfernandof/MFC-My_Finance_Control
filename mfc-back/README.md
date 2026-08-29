@@ -51,7 +51,7 @@ API REST para controle financeiro pessoal.
 | GET | `/dashboard/expenses-by-category` | Despesas por categoria |
 
 ### Swagger UI
-Apos iniciar a aplicacao, acesse: `http://localhost:8080/swagger-ui.html`
+Apos iniciar a aplicacao, acesse: `http://localhost:8081/api/swagger-ui.html`
 
 ## Como Rodar
 
@@ -63,14 +63,14 @@ Apos iniciar a aplicacao, acesse: `http://localhost:8080/swagger-ui.html`
 ### Executar
 
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run
 ```
 
 ### Via Docker
 
 ```bash
 docker build -t mfc-api .
-docker run -p 8080:8080 mfc-api
+docker run --env-file ../.env -p 8081:8081 mfc-api
 ```
 
 ## Variaveis de Ambiente
@@ -82,3 +82,11 @@ docker run -p 8080:8080 mfc-api
 | `DB_PASSWORD` | Senha do banco |
 | `JWT_SECRET` | Chave de assinatura do JWT |
 | `SERVER_PORT` | Porta do servidor |
+
+## Qualidade
+
+```bash
+./mvnw verify
+```
+
+O teste de migrations usa Testcontainers quando o Docker esta disponivel.

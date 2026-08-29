@@ -1,4 +1,8 @@
 <script setup>
+import { useId } from 'vue';
+
+defineOptions({ inheritAttrs: false });
+
 defineProps({
   label: String,
   modelValue: [String, Number],
@@ -9,18 +13,25 @@ defineProps({
 });
 
 defineEmits(['update:modelValue']);
+
+const inputId = useId();
 </script>
 
 <template>
   <div class="w-full">
-    <label v-if="label" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
+	    <label v-if="label" :for="inputId" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2 ml-1">
       {{ label }}
     </label>
 
     <div class="relative">
-      <input
-        :type="type"
-        :value="modelValue"
+	      <input
+	        v-bind="$attrs"
+	        :id="inputId"
+	        :type="type"
+	        :value="modelValue"
+	        :required="required"
+	        :aria-invalid="Boolean(error)"
+	        :aria-describedby="error ? `${inputId}-error` : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
         :placeholder="placeholder"
         :class="[
@@ -38,7 +49,7 @@ defineEmits(['update:modelValue']);
     </div>
 
     <transition name="fade">
-      <p v-if="error" class="text-rose-500 dark:text-rose-400 text-xs font-medium mt-1 ml-1 italic">
+	      <p v-if="error" :id="`${inputId}-error`" class="text-rose-500 dark:text-rose-400 text-xs font-medium mt-1 ml-1 italic">
         {{ error }}
       </p>
     </transition>

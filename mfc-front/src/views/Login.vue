@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import api from '../services/api';
 import BaseInput from '../components/BaseInput.vue';
 import { useTheme } from '../composables/useTheme';
+import { getApiErrorMessage } from '../utils/apiError';
 
 const router = useRouter();
 const { isDark, toggleTheme } = useTheme();
@@ -31,8 +32,8 @@ function validateForm() {
   if (!password.value) {
     errors.value.password = 'A senha é obrigatória.';
     isValid = false;
-  } else if (password.value.length < 6) {
-    errors.value.password = 'A senha deve ter pelo menos 6 caracteres.';
+	} else if (!isLogin.value && password.value.length < 8) {
+	  errors.value.password = 'A senha deve ter pelo menos 8 caracteres.';
     isValid = false;
   }
 
@@ -63,7 +64,7 @@ async function handleSubmit() {
       password.value = '';
     }
   } catch (error) {
-    const errorMsg = error.response?.data?.message || 'Ocorreu um erro inesperado.';
+	    const errorMsg = getApiErrorMessage(error);
     message.value = { text: errorMsg, type: 'danger' };
   } finally {
     loading.value = false;

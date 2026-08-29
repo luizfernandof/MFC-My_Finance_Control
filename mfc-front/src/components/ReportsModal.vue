@@ -1,36 +1,42 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { computed, ref, nextTick, toRef, watch } from 'vue';
 import api from '../services/api';
+import { months as meses, years as anos } from '../composables/usePeriodOptions';
+import { useEscapeClose } from '../composables/useEscapeClose';
+import { getBlobApiErrorMessage } from '../utils/apiError';
 
 const props = defineProps({
-  show: Boolean
+  show: Boolean,
+  reportType: {
+    type: String,
+    default: 'transactions'
+  }
 });
 
 const emit = defineEmits(['close']);
+useEscapeClose(toRef(props, 'show'), () => emit('close'));
 
 const mes = ref(new Date().getMonth() + 1);
 const ano = ref(new Date().getFullYear());
 const isLoading = ref(false);
 const apiError = ref('');
 
-const meses = [
-  { value: 1, label: 'Janeiro' },
-  { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' },
-  { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' },
-  { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' },
-  { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' },
-  { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' },
-  { value: 12, label: 'Dezembro' }
-];
+const reportConfig = computed(() => props.reportType === 'categories'
+  ? {
+      title: 'Gastos por Categoria',
+      description: 'Participação, comparação mensal e maiores despesas.',
+      endpoint: '/reports/categories/monthly',
+      filename: 'gastos_por_categoria'
+    }
+  : {
+      title: 'Extrato Mensal',
+      description: 'Resumo financeiro e todos os lançamentos do período.',
+      endpoint: '/reports/transactions/monthly',
+      filename: 'transacoes'
+    });
 
-const anos = computed(() => {
-  const currentYear = new Date().getFullYear();
-  return [currentYear, currentYear - 1, currentYear - 2];
+watch([() => props.show, () => props.reportType], () => {
+  apiError.value = '';
 });
 
 async function generateReport() {
@@ -38,7 +44,8 @@ async function generateReport() {
   apiError.value = '';
 
   try {
-    const response = await api.get(`/reports/transactions/monthly?month=${mes.value}&year=${ano.value}`, {
+    const response = await api.get(reportConfig.value.endpoint, {
+      params: { month: mes.value, year: ano.value },
       responseType: 'blob'
     });
 
@@ -48,44 +55,38 @@ async function generateReport() {
     link.href = url;
 
     const mesLabel = meses.find(m => m.value === Number(mes.value))?.label || mes.value;
-    link.download = `transacoes_${mesLabel.toLowerCase()}_${ano.value}.pdf`;
+    link.download = `${reportConfig.value.filename}_${mesLabel.toLowerCase()}_${ano.value}.pdf`;
 
     document.body.appendChild(link);
     link.click();
+    link.remove();
 
     await nextTick();
 
     window.URL.revokeObjectURL(url);
     emit('close');
   } catch (error) {
+    apiError.value = await getBlobApiErrorMessage(error, 'Não foi possível gerar o relatório.');
+  } finally {
     isLoading.value = false;
-    if (error.response?.data?.type === 'application/json') {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const jsonError = JSON.parse(reader.result);
-          apiError.value = jsonError.message || 'Erro ao gerar relatório';
-        } catch {
-          apiError.value = 'Erro ao gerar relatório';
-        }
-      };
-      reader.readAsText(error.response.data);
-    } else {
-      apiError.value = 'Erro ao conectar com o servidor';
-    }
   }
 }
 </script>
 
 <template>
-  <div v-if="show" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div v-if="show" role="dialog" aria-modal="true" aria-labelledby="report-title" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white dark:bg-slate-800 rounded-t-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 md:p-10 border border-white dark:border-slate-700">
 
       <div class="flex justify-between items-center mb-6 md:mb-8">
-        <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 italic tracking-tight">
-          Gerar Relatório PDF
-        </h2>
-        <button @click="$emit('close')" class="text-slate-300 hover:text-slate-500 dark:text-slate-500 dark:hover:text-slate-300 p-2">
+        <div>
+          <h2 id="report-title" class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 italic tracking-tight">
+            {{ reportConfig.title }}
+          </h2>
+          <p class="mt-1 text-xs font-medium text-slate-400 dark:text-slate-500">
+            {{ reportConfig.description }}
+          </p>
+        </div>
+        <button type="button" aria-label="Fechar relatório" @click="$emit('close')" class="text-slate-300 hover:text-slate-500 dark:text-slate-500 dark:hover:text-slate-300 p-2">
           <font-awesome-icon icon="fa-solid fa-xmark" class="text-2xl" />
         </button>
       </div>
@@ -97,9 +98,9 @@ async function generateReport() {
 
       <div class="space-y-4">
         <div>
-          <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Mês</label>
+          <label for="report-month" class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Mês</label>
           <div class="relative">
-            <select v-model="mes"
+            <select id="report-month" v-model="mes"
               class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 appearance-none">
               <option v-for="m in meses" :key="m.value" :value="m.value">
                 {{ m.label }}
@@ -110,9 +111,9 @@ async function generateReport() {
         </div>
 
         <div>
-          <label class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Ano</label>
+          <label for="report-year" class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Ano</label>
           <div class="relative">
-            <select v-model="ano"
+            <select id="report-year" v-model="ano"
               class="w-full px-5 py-4 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold text-slate-700 dark:text-slate-200 appearance-none">
               <option v-for="a in anos" :key="a" :value="a">
                 {{ a }}

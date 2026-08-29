@@ -4,11 +4,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.devl.mfc.exception.ErrorResponse;
-import io.jsonwebtoken.io.IOException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -24,13 +23,16 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 	@Override
 	public void handle(HttpServletRequest request, HttpServletResponse response,
 			AccessDeniedException accessDeniedException)
-			throws IOException, JsonProcessingException, java.io.IOException {
+			throws java.io.IOException {
 
-		ErrorResponse error = new ErrorResponse(403, "Acesso negado",
-				"Você não tem permissão para acessar este recurso");
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN,
+				"Você não tem permissão para acessar este recurso.");
+		problem.setTitle("Acesso negado");
+		problem.setProperty("code", "ACCESS_DENIED");
 
 		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-		response.setContentType("application/json");
-		response.getWriter().write(objectMapper.writeValueAsString(error));
+		response.setCharacterEncoding("UTF-8");
+		response.setContentType("application/problem+json");
+		objectMapper.writeValue(response.getWriter(), problem);
 	}
 }

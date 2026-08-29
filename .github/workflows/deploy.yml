@@ -1,21 +1,48 @@
-name: Deploy Monorepo MFC
+name: Deploy MFC
 
 on:
-  push:
-    branches: [ main ]
+  workflow_run:
+    workflows: [CI]
+    branches: [main]
+    types: [completed]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: self-hosted
+    permissions:
+      contents: read
     steps:
-      - name: Checkout Monorepo
+      - name: Checkout da versão validada
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Build e Deploy (mfc-front, mfc-back)
+      - name: Construir imagens
+        run: docker compose --env-file /home/actions/.env build
+
+      - name: Atualizar serviços sem remover o banco
+        run: docker compose --env-file /home/actions/.env up -d --remove-orphans
+
+      - name: Verificar saúde da aplicação
         run: |
-          docker compose --env-file /home/actions/.env down
-          docker compose --env-file /home/actions/.env up -d --build
+          for attempt in $(seq 1 12); do
+            if docker compose --env-file /home/actions/.env exec -T mfc-front \
+              wget -q -O - http://localhost:8080/api/actuator/health; then
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose --env-file /home/actions/.env logs --tail=100
+          exit 1
+
+      - name: Limpar artefatos Docker não utilizados
+        run: |
+          docker builder prune -f
           docker image prune -f

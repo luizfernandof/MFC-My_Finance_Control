@@ -19,9 +19,15 @@ import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.dto.TransactionRequestDTO;
 import br.com.devl.mfc.dto.TransactionResponseDTO;
 import br.com.devl.mfc.service.TransactionService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
+import org.springframework.validation.annotation.Validated;
 
 @RestController
 @RequestMapping("/transactions")
+@Validated
 public class TransactionController {
 
 	private final TransactionService transactionService;
@@ -35,16 +41,18 @@ public class TransactionController {
 	}
 
 	@PostMapping
-	public ResponseEntity<TransactionResponseDTO> create(@RequestBody TransactionRequestDTO dto) {
+	public ResponseEntity<TransactionResponseDTO> create(@Valid @RequestBody TransactionRequestDTO dto) {
 		User user = getAuthenticatedUser();
 		return ResponseEntity.ok(transactionService.create(dto, user));
 	}
 
 	@GetMapping
-	public ResponseEntity<Page<TransactionResponseDTO>> list(@RequestParam int month, @RequestParam int year,
+	public ResponseEntity<Page<TransactionResponseDTO>> list(@RequestParam @Min(1) @Max(12) int month,
+			@RequestParam @Min(2000) @Max(2200) int year,
+			@RequestParam(defaultValue = "") @Size(max = 100) String search,
 			@PageableDefault(size = 10, sort = "date") Pageable pageable) {
 		User user = getAuthenticatedUser();
-		return ResponseEntity.ok(transactionService.list(user, month, year, pageable));
+		return ResponseEntity.ok(transactionService.list(user, month, year, search, pageable));
 	}
 
 	@GetMapping("/{id}")
@@ -55,7 +63,7 @@ public class TransactionController {
 
 	@PutMapping("/{id}")
 	public ResponseEntity<TransactionResponseDTO> update(@PathVariable Long id,
-			@RequestBody TransactionRequestDTO dto) {
+				@Valid @RequestBody TransactionRequestDTO dto) {
 		User user = getAuthenticatedUser();
 		return ResponseEntity.ok(transactionService.update(id, dto, user));
 	}
@@ -67,10 +75,17 @@ public class TransactionController {
 		return ResponseEntity.noContent().build();
 	}
 
-	@DeleteMapping("/{id}/recurrent-forward")
-	public ResponseEntity<Void> deleteFromDateForward(@PathVariable Long id) {
+	@DeleteMapping("/{id}/group-forward")
+	public ResponseEntity<Void> deleteGroupForward(@PathVariable Long id) {
 		User user = getAuthenticatedUser();
-		transactionService.deleteRecurrentForward(id, user);
+		transactionService.deleteGroupForward(id, user);
+		return ResponseEntity.noContent().build();
+	}
+
+	@DeleteMapping("/{id}/group")
+	public ResponseEntity<Void> deleteGroup(@PathVariable Long id) {
+		User user = getAuthenticatedUser();
+		transactionService.deleteGroup(id, user);
 		return ResponseEntity.noContent().build();
 	}
 

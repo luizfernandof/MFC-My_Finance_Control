@@ -1,6 +1,7 @@
 package br.com.devl.mfc.auth.controller;
 
 import java.net.URI;
+import java.util.Locale;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -27,6 +28,7 @@ import br.com.devl.mfc.auth.service.RefreshTokenService;
 import br.com.devl.mfc.exception.BusinessException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -49,26 +51,29 @@ public class AuthController {
 	}
 
 	@PostMapping("/register")
-	public ResponseEntity<Void> register(@RequestBody RegisterRequest request) {
-		if (userRepository.existsByEmail(request.getEmail())) {
-			throw new BusinessException("Este email já foi cadastrado!");
+	public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
+		String email = normalizeEmail(request.getEmail());
+		if (userRepository.existsByEmailIgnoreCase(email)) {
+			throw new BusinessException("EMAIL_ALREADY_EXISTS", "Este e-mail já foi cadastrado!",
+					org.springframework.http.HttpStatus.CONFLICT);
 		}
 		User user = new User();
-		user.setEmail(request.getEmail());
+		user.setEmail(email);
 		user.setPassword(passwordEncoder.encode(request.getPassword()));
 		user.setRole(UserRole.USER);
 		user.setEnabled(true);
 		User savedUser = userRepository.save(user);
-		URI location = ServletUriComponentsBuilder.fromCurrentRequest().buildAndExpand(savedUser.getId()).toUri();
+		URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(savedUser.getId()).toUri();
 		return ResponseEntity.created(location).build();
 	}
 
 	@Operation(summary = "Realiza autenticação do usuário", description = "Retorna um JWT de accessToken e um refreshToken")
 	@PostMapping("/login")
-	public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
+	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+		String email = normalizeEmail(request.getEmail());
 		authenticationManager
-				.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-		User user = userRepository.findByEmail(request.getEmail())
+					.authenticate(new UsernamePasswordAuthenticationToken(email, request.getPassword()));
+		User user = userRepository.findByEmailIgnoreCase(email)
 				.orElseThrow(() -> new BusinessException("Usuário não encontrado!"));
 		String accessToken = jwtService.generateToken(user);
 		RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
@@ -76,22 +81,22 @@ public class AuthController {
 	}
 
 	@PostMapping("/logout")
-	public ResponseEntity<Void> logout(@RequestBody LogoutRequest request) {
-		refreshTokenService.findByToken(request.getRefreshToken()).ifPresent(token -> {
-			refreshTokenService.deleteByUser(token.getUser());
-		});
+	public ResponseEntity<Void> logout(@Valid @RequestBody LogoutRequest request) {
+		refreshTokenService.deleteByToken(request.getRefreshToken());
 		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/refresh")
-	public ResponseEntity<RefreshTokenResponse> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+	public ResponseEntity<RefreshTokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
 		String requestRefreshToken = refreshTokenRequest.getRefreshToken();
-		RefreshToken refreshToken = refreshTokenService.findByToken(requestRefreshToken)
-				.map(refreshTokenService::verifyExpiration)
-				.orElseThrow(() -> new BusinessException("Sessão expirada. Faça login novamente!"));
+		RefreshToken refreshToken = refreshTokenService.rotateRefreshToken(requestRefreshToken);
 		User user = refreshToken.getUser();
 		String newAccessToken = jwtService.generateToken(user);
-		return ResponseEntity.ok(new RefreshTokenResponse(newAccessToken));
+		return ResponseEntity.ok(new RefreshTokenResponse(newAccessToken, refreshToken.getToken()));
+	}
+
+	private String normalizeEmail(String email) {
+		return email.trim().toLowerCase(Locale.ROOT);
 	}
 
 }

@@ -36,10 +36,10 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
-        if (userRepository.findByEmail(seedEmail).isEmpty()) {
+	        if (userRepository.findByEmailIgnoreCase(seedEmail).isEmpty()) {
 
             User user = new User();
-            user.setEmail(seedEmail);
+	            user.setEmail(seedEmail.trim().toLowerCase(java.util.Locale.ROOT));
             user.setPassword(passwordEncoder.encode(seedPassword));
             user.setRole(UserRole.ADMIN);
             user.setEnabled(true);

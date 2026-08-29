@@ -1,7 +1,6 @@
 package br.com.devl.mfc.auth.config;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +10,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import br.com.devl.mfc.auth.entity.User;
 import br.com.devl.mfc.auth.repository.UserRepository;
 import br.com.devl.mfc.auth.service.JwtService;
+import br.com.devl.mfc.auth.exception.SecurityExceptionHandler;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -23,16 +23,21 @@ public class JwtFilter extends OncePerRequestFilter {
 
 	private final JwtService jwtService;
 	private final UserRepository userRepository;
+	private final SecurityExceptionHandler securityExceptionHandler;
 
-	public JwtFilter(JwtService jwtService, UserRepository userRepository) {
+	public JwtFilter(JwtService jwtService, UserRepository userRepository,
+			SecurityExceptionHandler securityExceptionHandler) {
 		this.jwtService = jwtService;
 		this.userRepository = userRepository;
+		this.securityExceptionHandler = securityExceptionHandler;
 	}
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
 		String path = request.getServletPath();
 		return path.startsWith("/auth/")
+		        || path.equals("/actuator/health")
+		        || path.startsWith("/actuator/health/")
 		        || path.startsWith("/h2-console")
 		        || path.startsWith("/swagger-ui")
 		        || path.startsWith("/v3/api-docs");
@@ -49,31 +54,28 @@ public class JwtFilter extends OncePerRequestFilter {
 
 			try {
 				String email = jwtService.getEmail(token);
-				User user = userRepository.findByEmail(email).orElse(null);
+					User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
 
-				if (user != null) {
-					UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null,
-							List.of());
+					if (user != null && user.isEnabled()) {
+						UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user, null,
+								user.getAuthorities());
 					SecurityContextHolder.getContext().setAuthentication(auth);
 					filterChain.doFilter(request, response);
 					return;
+					}
+					securityExceptionHandler.writeUnauthorized(response, "USER_UNAVAILABLE",
+							"Usuário inexistente ou desabilitado.");
+					return;
+				} catch (ExpiredJwtException e) {
+					securityExceptionHandler.writeUnauthorized(response, "ACCESS_TOKEN_EXPIRED", "Token expirado.");
+					return;
+				} catch (JwtException e) {
+					securityExceptionHandler.writeUnauthorized(response, "INVALID_ACCESS_TOKEN", "Token inválido.");
+					return;
 				}
-			} catch (ExpiredJwtException e) {
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.setContentType("application/json");
-				response.getWriter().write("{\"error\": \"Token expirado\", \"message\": \"" + e.getMessage() + "\"}");
-				return;
-			} catch (JwtException e) {
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.setContentType("application/json");
-				response.getWriter().write("{\"error\": \"Token inválido\", \"message\": \"" + e.getMessage() + "\"}");
-				return;
 			}
-		}
 
-		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		response.setContentType("application/json");
-		response.getWriter().write("{\"error\": \"Token não fornecido\"}");
+			securityExceptionHandler.writeUnauthorized(response, "ACCESS_TOKEN_MISSING", "Token não fornecido.");
 	}
 
 }

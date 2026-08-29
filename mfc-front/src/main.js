@@ -26,10 +26,10 @@ import {
   faChevronRight,
   faFilePdf,
   faChartLine,
+  faChartPie,
   faExchangeAlt,
   faTags,
   faFileAlt,
-  faUser,
   faSignOutAlt,
   faCalendarAlt,
   faEye,
@@ -39,7 +39,8 @@ import {
   faArrowUp,
   faArrowDown,
   faDownload,
-  faArrowRightLong
+  faArrowRightLong,
+  faMagnifyingGlass
 } from '@fortawesome/free-solid-svg-icons'
 
 // 3. Adicionando à biblioteca global
@@ -61,10 +62,10 @@ library.add(
   faChevronRight,
   faFilePdf,
   faChartLine,
+  faChartPie,
   faExchangeAlt,
   faTags,
   faFileAlt,
-  faUser,
   faSignOutAlt,
   faCalendarAlt,
   faEye,
@@ -74,7 +75,8 @@ library.add(
   faArrowUp,
   faArrowDown,
   faDownload,
-  faArrowRightLong
+  faArrowRightLong,
+  faMagnifyingGlass
 )
 
 const app = createApp(App)

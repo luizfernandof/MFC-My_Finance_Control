@@ -7,7 +7,7 @@ import { useTheme } from './composables/useTheme';
 useTheme();
 
 const route = useRoute();
-const showNavbar = computed(() => route.path !== '/');
+const showNavbar = computed(() => Boolean(route.meta.requiresAuth));
 </script>
 
 <template>

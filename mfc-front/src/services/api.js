@@ -8,6 +8,11 @@ const api = axios.create({
   }
 });
 
+export function clearAuthTokens() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+}
+
 // Variáveis de controle para a "Fila de Espera"
 let isRefreshing = false;
 let failedQueue = [];
@@ -41,8 +46,8 @@ api.interceptors.response.use(
 
     // Verifica se o erro é 401 (Não autorizado) e se não é uma repetição
     // Não tenta refresh para requisições de autenticação (login/refresh)
-    const isAuthRequest = originalRequest.url?.includes('/auth/');
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
+    const isAuthRequest = originalRequest?.url?.includes('/auth/');
+    if (originalRequest && error.response?.status === 401 && !originalRequest._retry && !isAuthRequest) {
 
       // Se já estivermos renovando o token, colocamos esta requisição na fila
       if (isRefreshing) {
@@ -63,9 +68,21 @@ api.interceptors.response.use(
       return new Promise((resolve, reject) => {
         const refreshToken = localStorage.getItem('refreshToken');
 
+        if (!refreshToken) {
+          processQueue(error);
+          clearAuthTokens();
+          isRefreshing = false;
+          router.push('/');
+          reject(error);
+          return;
+        }
+
         // Usamos o axios puro (sem interceptors) para buscar o novo token
         axios.post('/api/auth/refresh', { refreshToken })
           .then(({ data }) => {
+            if (!data?.accessToken || !data?.refreshToken) {
+              throw new Error('A resposta de renovação da sessão é inválida.');
+            }
             // 1. Salva os novos dados
             localStorage.setItem('accessToken', data.accessToken);
             localStorage.setItem('refreshToken', data.refreshToken);
@@ -83,7 +100,7 @@ api.interceptors.response.use(
           .catch((err) => {
             // Se o Refresh Token também falhou, limpa tudo e desloga
             processQueue(err, null);
-            localStorage.clear();
+			clearAuthTokens();
             router.push('/');
             reject(err);
           })

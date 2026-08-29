@@ -49,7 +49,7 @@ mfc-back/                    # Spring Boot 3.5 (Java 17)
   exception/                 # Tratamento global de erros
   repository/                # Spring Data JPA
   service/                   # Lógica de negócio
-  resources/db/migration/    # Flyway (V1-V6)
+  resources/db/migration/    # Flyway (V1-V7)
 
 mfc-front/                   # Vue 3 + Vite + TailwindCSS
   components/                # BarChart, DoughnutChart, BaseInput...
@@ -77,6 +77,7 @@ DB_PASSWORD=sua_senha
 JWT_SECRET=sua_chave_base64
 JWT_EXPIRATION=600000
 JWT_REFRESH_EXPIRATION=604800000
+HTTP_PORT=80
 ```
 
 ```bash
@@ -101,6 +102,8 @@ Acesse `http://localhost`.
 | `POST` | `/api/transactions` | Criar |
 | `PUT` | `/api/transactions/{id}` | Editar |
 | `DELETE` | `/api/transactions/{id}` | Excluir |
+| `DELETE` | `/api/transactions/{id}/group-forward` | Excluir este e os próximos do grupo |
+| `DELETE` | `/api/transactions/{id}/group` | Excluir todo o grupo |
 | `GET` | `/api/categories` | Listar categorias |
 | `POST` | `/api/categories` | Criar categoria |
 | `GET` | `/api/reports/transactions/monthly` | PDF mensal |
@@ -110,16 +113,36 @@ Acesse `http://localhost`.
 ## 🧪 Testes
 
 ```bash
-cd mfc-back && ./mvnw test
+cd mfc-back
+./mvnw verify
+
+cd ../mfc-front
+npm ci
+npm test
+npm run lint -- --quiet
+npm run build
 ```
 
-Usa H2 em memória com profile `test`.
+Os testes rápidos do backend usam H2. A suíte de migrações usa PostgreSQL via Testcontainers e é ignorada automaticamente quando o Docker não está disponível.
 
 ---
 
 ## 📦 Deploy
 
-Deploy automático via GitHub Actions ao push na `main`.
+Pull requests e pushes na `dev`/`main` executam testes, lint, build e auditoria. O deploy da `main` só começa após o CI terminar com sucesso e atualiza os serviços sem executar `docker compose down`, preservando o volume do PostgreSQL.
+
+O backend e o frontend rodam como usuários sem privilégios nos containers. A saúde pode ser consultada em `/api/actuator/health`.
+
+## 🔐 Segurança e sessões
+
+- Access tokens expirados são renovados uma única vez e as requisições concorrentes aguardam a mesma renovação.
+- Refresh tokens são rotacionados a cada uso e revogados no logout.
+- Respostas de erro seguem `application/problem+json` e não expõem exceções internas.
+- E-mails e nomes de categorias são únicos sem diferenciar maiúsculas de minúsculas.
+
+## 📄 Relatórios
+
+Os PDFs são gerados com Apache PDFBox (Apache License 2.0). O total de uma compra parcelada é preservado exatamente; qualquer diferença de centavos fica na última parcela.
 
 ---
 

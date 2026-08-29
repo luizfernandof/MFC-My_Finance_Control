@@ -5,10 +5,11 @@ import java.io.IOException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import br.com.devl.mfc.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -27,14 +28,16 @@ public class SecurityExceptionHandler implements AuthenticationEntryPoint {
                          AuthenticationException authException)
             throws IOException {
 
-        ErrorResponse error = new ErrorResponse(
-                401,
-                "Não autenticado",
-                "Token JWT ausente ou inválido"
-        );
+	        writeUnauthorized(response, "UNAUTHORIZED", "Token JWT ausente ou inválido.");
+	    }
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-        response.getWriter().write(objectMapper.writeValueAsString(error));
-    }
+	public void writeUnauthorized(HttpServletResponse response, String code, String detail) throws IOException {
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, detail);
+		problem.setTitle("Não autenticado");
+		problem.setProperty("code", code);
+		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		response.setCharacterEncoding("UTF-8");
+		response.setContentType("application/problem+json");
+		objectMapper.writeValue(response.getWriter(), problem);
+	}
 }

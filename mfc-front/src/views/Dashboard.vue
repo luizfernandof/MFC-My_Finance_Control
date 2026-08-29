@@ -5,6 +5,8 @@ import DoughnutChart from '../components/DoughnutChart.vue';
 import BarChart from '../components/BarChart.vue';
 import { useBreakpoint } from '../composables/useBreakpoint';
 import { useTheme } from '../composables/useTheme';
+import { months, years } from '../composables/usePeriodOptions';
+import { getApiErrorMessage, getBlobApiErrorMessage } from '../utils/apiError';
 
 const { isMobile } = useBreakpoint();
 const { isDark } = useTheme();
@@ -15,6 +17,8 @@ const loading = ref(false);
 const chartKey = ref(0);
 const barChartKey = ref(0);
 const exporting = ref(false);
+const loadError = ref('');
+let requestSequence = 0;
 
 const summary = ref({ totalIncome: 0, totalExpense: 0, balance: 0, previousIncome: 0, previousExpense: 0, previousBalance: 0, expenseByCategory: [] });
 const trendData = ref([]);
@@ -196,7 +200,9 @@ const trendChartOptions = computed(() => ({
 }));
 
 async function fetchData() {
-  loading.value = true;
+	  const requestId = ++requestSequence;
+	  loading.value = true;
+	  loadError.value = '';
   try {
     const params = { month: selectedMonth.value, year: selectedYear.value };
     const [resSummary, resTrend, resTransactions] = await Promise.all([
@@ -205,17 +211,20 @@ async function fetchData() {
       api.get('/transactions', { params: { ...params, page: 0, size: 5, sort: 'date,desc' } })
     ]);
 
-    summary.value = resSummary.data;
-    trendData.value = resTrend.data || [];
-    recentTransactions.value = resTransactions.data?.content || [];
+	    if (requestId !== requestSequence) return;
+	    summary.value = resSummary.data;
+	    trendData.value = resTrend.data || [];
+	    recentTransactions.value = resTransactions.data?.content || [];
 
     await nextTick();
     chartKey.value++;
     barChartKey.value++;
-  } catch (error) {
-    console.error("Erro ao carregar dashboard:", error);
-  } finally {
-    loading.value = false;
+	  } catch (error) {
+	    if (requestId === requestSequence) {
+	      loadError.value = getApiErrorMessage(error, 'Não foi possível carregar o dashboard.');
+	    }
+	  } finally {
+	    if (requestId === requestSequence) loading.value = false;
   }
 }
 
@@ -232,8 +241,8 @@ async function exportPdf() {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Erro ao exportar PDF:", error);
+	  } catch (error) {
+	    loadError.value = await getBlobApiErrorMessage(error, 'Não foi possível gerar o relatório.');
   } finally {
     exporting.value = false;
   }
@@ -241,16 +250,6 @@ async function exportPdf() {
 
 watch([selectedMonth, selectedYear], fetchData);
 onMounted(fetchData);
-
-const months = [
-  { value: 1, label: 'Janeiro' }, { value: 2, label: 'Fevereiro' },
-  { value: 3, label: 'Março' }, { value: 4, label: 'Abril' },
-  { value: 5, label: 'Maio' }, { value: 6, label: 'Junho' },
-  { value: 7, label: 'Julho' }, { value: 8, label: 'Agosto' },
-  { value: 9, label: 'Setembro' }, { value: 10, label: 'Outubro' },
-  { value: 11, label: 'Novembro' }, { value: 12, label: 'Dezembro' }
-];
-const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - i);
 
 const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
 </script>
@@ -286,9 +285,13 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
           <span class="hidden sm:inline">PDF</span>
         </button>
       </div>
-    </div>
+	    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+	    <div v-if="loadError" role="alert" class="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-600 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-400">
+	      {{ loadError }}
+	    </div>
+
+	    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
       <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
         <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">Entradas</span>
         <h3 class="text-2xl md:text-3xl font-bold text-emerald-500">R$ {{ (summary.totalIncome || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</h3>
