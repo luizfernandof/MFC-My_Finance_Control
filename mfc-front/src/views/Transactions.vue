@@ -169,9 +169,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-3 md:p-6 max-w-7xl mx-auto min-h-screen flex flex-col">
+  <div class="p-3 md:p-6 max-w-7xl mx-auto min-h-screen">
 
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-10">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
       <div class="w-full md:w-auto text-left">
         <h2 class="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 italic uppercase tracking-tighter leading-tight">
           Transações
@@ -212,7 +212,7 @@ onMounted(async () => {
       </div>
 	    </div>
 
-    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div class="relative w-full sm:max-w-lg">
         <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-300 dark:text-slate-500" />
         <input
@@ -233,13 +233,13 @@ onMounted(async () => {
 	      {{ loadError }}
 	    </div>
 
-	    <div v-if="loading" class="flex-grow py-16 text-center text-sm font-medium text-slate-400">
+	    <div v-if="loading" class="py-16 text-center text-sm font-medium text-slate-400">
 	      Carregando transações...
 	    </div>
-	    <div v-else-if="transactions.length === 0" class="flex-grow rounded-2xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400 dark:border-slate-700">
+	    <div v-else-if="transactions.length === 0" class="rounded-2xl border border-dashed border-slate-200 py-16 text-center text-sm text-slate-400 dark:border-slate-700">
 	      {{ searchTerm.trim() ? 'Nenhuma transação encontrada para a busca neste período.' : 'Nenhuma transação encontrada para este período.' }}
 	    </div>
-	    <div v-else class="flex-grow">
+	    <div v-else>
       <TransactionTableDesktop v-if="!isMobile" :transactions="transactions" @edit="prepareEdit"
         @delete="openDeleteConfirm" />
       <TransactionCardsMobile v-else :transactions="transactions" @edit="prepareEdit" @delete="openDeleteConfirm" />

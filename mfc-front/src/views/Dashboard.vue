@@ -257,7 +257,7 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
 <template>
   <div class="p-4 md:p-6 max-w-7xl mx-auto min-h-screen">
 
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
       <div class="w-full md:w-auto">
         <h2 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 italic uppercase tracking-tighter leading-tight">
           Dashboard
@@ -287,11 +287,11 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
       </div>
 	    </div>
 
-	    <div v-if="loadError" role="alert" class="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-600 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-400">
+	    <div v-if="loadError" role="alert" class="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-600 dark:border-rose-800 dark:bg-rose-900/20 dark:text-rose-400">
 	      {{ loadError }}
 	    </div>
 
-	    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+	    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center">
         <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1">Entradas</span>
         <h3 class="text-2xl md:text-3xl font-bold text-emerald-500">R$ {{ (summary.totalIncome || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) }}</h3>
@@ -328,7 +328,7 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
       </div>
     </div>
 
-    <div v-if="topCategories.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+    <div v-if="topCategories.length > 0" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
       <div v-for="(cat, index) in topCategories" :key="cat.category"
         class="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-3">
         <div class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: categoryColors[index] }"></div>
@@ -345,7 +345,7 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
       </div>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-6 md:mb-8">
+    <div class="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-center mb-4">
       <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-6 text-center italic">
         Distribuição de Gastos
       </h3>
@@ -366,7 +366,7 @@ const categoryColors = ['#6366f1', '#10b981', '#f59e0b'];
       </div>
     </div>
 
-    <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 mb-6 md:mb-8">
+    <div class="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 mb-4">
       <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-4 italic">
         Tendência Mensal
       </h3>

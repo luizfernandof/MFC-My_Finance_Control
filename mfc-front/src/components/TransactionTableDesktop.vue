@@ -9,7 +9,7 @@ function formatDate(dateString) {
 </script>
 
 <template>
-  <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-50 dark:border-slate-700 mb-4">
+  <div class="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-xl overflow-hidden border border-slate-50 dark:border-slate-700">
     <table class="w-full text-left border-collapse">
       <thead class="bg-slate-50/50 dark:bg-slate-700/50 text-[9px] font-black uppercase text-slate-400 dark:text-slate-400 tracking-[0.2em]">
         <tr>

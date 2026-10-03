@@ -144,7 +144,7 @@ onMounted(fetchCategories);
 <template>
   <div class="p-4 md:p-6 max-w-5xl mx-auto min-h-screen">
 
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
       <div class="w-full md:w-auto">
         <h2 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100 italic uppercase tracking-tighter leading-tight">Categorias</h2>
         <p class="text-slate-400 dark:text-slate-500 text-xs font-medium mt-1">Gerencie seus grupos de custo</p>
@@ -157,7 +157,7 @@ onMounted(fetchCategories);
       </button>
 	    </div>
 
-    <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div class="relative w-full sm:max-w-md">
         <font-awesome-icon icon="fa-solid fa-magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-300 dark:text-slate-500" />
         <input

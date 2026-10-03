@@ -26,7 +26,7 @@ function changePageSize(event) {
 </script>
 
 <template>
-  <nav aria-label="Paginação" class="flex flex-col sm:flex-row items-center justify-between gap-3 py-4">
+  <nav aria-label="Paginação" class="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3">
     <p class="text-xs font-medium text-slate-400 dark:text-slate-500">
       Exibindo {{ firstItem }}–{{ lastItem }} de {{ totalElements }} registros
     </p>

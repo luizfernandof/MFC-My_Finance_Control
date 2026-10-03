@@ -77,7 +77,7 @@ async function generateReport() {
   <div v-if="show" role="dialog" aria-modal="true" aria-labelledby="report-title" class="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-sm">
     <div class="bg-white dark:bg-slate-800 rounded-t-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 md:p-10 border border-white dark:border-slate-700">
 
-      <div class="flex justify-between items-center mb-6 md:mb-8">
+      <div class="flex justify-between items-center mb-4">
         <div>
           <h2 id="report-title" class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 italic tracking-tight">
             {{ reportConfig.title }}
@@ -91,12 +91,12 @@ async function generateReport() {
         </button>
       </div>
 
-      <div v-if="apiError" class="mb-6 p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-[10px] font-black rounded-2xl border border-rose-100 dark:border-rose-800 uppercase text-center tracking-widest">
+      <div v-if="apiError" class="mb-4 p-4 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 text-[10px] font-black rounded-2xl border border-rose-100 dark:border-rose-800 uppercase text-center tracking-widest">
         <i class="fa-solid fa-triangle-exclamation mr-2"></i>
         {{ apiError }}
       </div>
 
-      <div class="space-y-4">
+      <div class="space-y-3">
         <div>
           <label for="report-month" class="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 ml-1">Mês</label>
           <div class="relative">
@@ -124,7 +124,7 @@ async function generateReport() {
         </div>
       </div>
 
-      <div class="flex flex-col md:flex-row gap-2 md:gap-4 pt-6">
+      <div class="flex flex-col md:flex-row gap-2 pt-4">
         <button type="button" @click="$emit('close')"
           class="order-2 md:order-1 flex-1 py-4 text-slate-400 dark:text-slate-500 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl transition-all">
           Cancelar
